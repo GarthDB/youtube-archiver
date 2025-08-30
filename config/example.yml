@@ -56,8 +56,10 @@ channels:
 processing:
   age_threshold_hours: 24  # Videos older than this will be processed
   target_visibility: "unlisted"  # Change videos to this visibility
-  max_videos_per_channel: 50  # Maximum videos to check per channel
+  max_videos_per_channel: 50  # Maximum videos to check per channel (increase to 200-500 for initial backlog cleanup)
   dry_run: false  # Set to true for testing without making changes
+  batch_size: 10  # Number of videos to process in each batch (helps with rate limiting)
+  initial_backlog_mode: false  # Set to true for first-time setup with large backlogs
 
 # YouTube API Configuration
 youtube_api:

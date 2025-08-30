@@ -1,0 +1,92 @@
+# YouTube Archiver Configuration - Initial Backlog Cleanup
+# Use this configuration for your first run to handle the large backlog of videos
+# Copy this file to config.yml and customize for your stake
+
+# Stake Information
+stake_info:
+  name: "Example Stake"
+  tech_specialist: "tech.specialist@example.com"
+  region: "Utah, USA"
+  notes: "Initial backlog cleanup - processing accumulated sacrament meeting recordings"
+
+# YouTube Channels to Process
+channels:
+  - name: "1st Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_1"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200  # Increased for backlog cleanup
+
+  - name: "2nd Ward" 
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_2"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+  - name: "3rd Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_3"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+  - name: "4th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_4"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+  - name: "5th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_5"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+  - name: "6th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_6"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+  - name: "7th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_7"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 200
+
+# Processing Settings - Optimized for Backlog Cleanup
+processing:
+  age_threshold_hours: 24  # Standard 24-hour threshold
+  target_visibility: "unlisted"  # Change videos to unlisted
+  max_videos_per_channel: 200  # Increased limit for backlog processing
+  dry_run: true  # IMPORTANT: Start with dry-run to see what will be processed
+  batch_size: 5  # Smaller batches to avoid rate limiting
+  initial_backlog_mode: true  # Enable backlog optimizations
+
+# YouTube API Configuration
+youtube_api:
+  credentials_file: "${YOUTUBE_CREDENTIALS_FILE:credentials.json}"
+  token_file: "${YOUTUBE_TOKEN_FILE:token.json}"
+  scopes:
+    - "https://www.googleapis.com/auth/youtube"
+
+# Retry Settings - More conservative for large batches
+retry_settings:
+  max_attempts: 5  # More retry attempts
+  backoff_factor: 3.0  # Slower backoff for rate limiting
+  max_delay: 600  # Wait up to 10 minutes between retries
+
+# Logging Configuration - More detailed for backlog processing
+logging:
+  level: "INFO"  # Use DEBUG for detailed troubleshooting
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "backlog-cleanup.log"  # Log to file for review
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+
+# Usage Instructions:
+# 1. Copy this file to config.yml
+# 2. Update channel IDs and stake information
+# 3. Run: youtube-archiver --config config.yml --dry-run
+# 4. Review the output to see what will be processed
+# 5. When ready: change dry_run to false and run again
+# 6. After backlog cleanup, switch to example.yml for regular use

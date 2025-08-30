@@ -51,8 +51,10 @@ class ProcessingSettings(BaseModel):
 
     age_threshold_hours: int = Field(default=24, ge=1, le=168, description="Age threshold in hours")
     target_visibility: str = Field(default="unlisted", description="Target visibility for processed videos")
-    max_videos_per_channel: int = Field(default=50, ge=1, le=200, description="Max videos to check per channel")
+    max_videos_per_channel: int = Field(default=50, ge=1, le=500, description="Max videos to check per channel (increase for initial backlog)")
     dry_run: bool = Field(default=False, description="Run in dry-run mode (no actual changes)")
+    batch_size: int = Field(default=10, ge=1, le=50, description="Number of videos to process in each batch")
+    initial_backlog_mode: bool = Field(default=False, description="Enable optimizations for processing large backlogs")
     
     @validator("target_visibility")
     def validate_target_visibility(cls, v: str) -> str:

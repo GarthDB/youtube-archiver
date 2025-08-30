@@ -47,7 +47,12 @@ This tool helps LDS stake tech specialists automatically change the visibility o
 
 4. **Configure the application**:
    ```bash
+   # For initial setup with backlog cleanup
+   cp config/backlog-cleanup.yml config/config.yml
+   
+   # OR for regular ongoing use
    cp config/example.yml config/config.yml
+   
    # Edit config/config.yml with your stake and channel information
    ```
 
@@ -57,19 +62,44 @@ This tool helps LDS stake tech specialists automatically change the visibility o
 
 ### Usage
 
-**Run in dry-run mode** (recommended first):
+#### Initial Setup (First Time)
+
+⚠️ **Important**: The first time you run this tool, there will likely be many videos to process since ward tech specialists may not have been regularly changing video visibility. This could be dozens or hundreds of videos per channel.
+
+**1. Start with a dry-run to see what would be processed**:
 ```bash
 youtube-archiver --config config/config.yml --dry-run
 ```
 
-**Process all channels**:
+**2. Review the output and consider processing one channel at a time initially**:
+```bash
+youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1 --dry-run
+```
+
+**3. When ready, process the backlog** (this may take several minutes):
 ```bash
 youtube-archiver --config config/config.yml
 ```
 
+#### Regular Usage (Weekly)
+
+After the initial backlog is processed, regular runs should only find 1-3 videos per week per channel:
+
+```bash
+youtube-archiver --config config/config.yml
+```
+
+#### Additional Options
+
 **Process specific channels**:
 ```bash
 youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1 UC_CHANNEL_ID_2
+```
+
+**Increase processing limits for backlog cleanup**:
+```bash
+# Temporarily increase the video check limit in config.yml
+# max_videos_per_channel: 200  # Default is 50
 ```
 
 ## Configuration
