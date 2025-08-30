@@ -1,0 +1,81 @@
+# YouTube Archiver Configuration Example
+# Copy this file to config.yml and customize for your stake
+
+# Stake Information
+stake_info:
+  name: "Example Stake"
+  tech_specialist: "tech.specialist@example.com"
+  region: "Utah, USA"
+  notes: "Manages 7 ward channels for sacrament meeting recordings"
+
+# YouTube Channels to Process
+channels:
+  - name: "1st Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_1"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "2nd Ward" 
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_2"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "3rd Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_3"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "4th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_4"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "5th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_5"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "6th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_6"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+  - name: "7th Ward"
+    channel_id: "UC_EXAMPLE_CHANNEL_ID_7"
+    timezone: "America/Denver"
+    enabled: true
+    max_videos_to_check: 50
+
+# Processing Settings
+processing:
+  age_threshold_hours: 24  # Videos older than this will be processed
+  target_visibility: "unlisted"  # Change videos to this visibility
+  max_videos_per_channel: 50  # Maximum videos to check per channel
+  dry_run: false  # Set to true for testing without making changes
+
+# YouTube API Configuration
+youtube_api:
+  credentials_file: "${YOUTUBE_CREDENTIALS_FILE:credentials.json}"
+  token_file: "${YOUTUBE_TOKEN_FILE:token.json}"
+  scopes:
+    - "https://www.googleapis.com/auth/youtube"
+
+# Retry Settings for API Calls
+retry_settings:
+  max_attempts: 3
+  backoff_factor: 2.0
+  max_delay: 300  # Maximum delay in seconds
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: null  # Set to a file path to enable file logging
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
