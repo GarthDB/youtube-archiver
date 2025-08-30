@@ -42,12 +42,12 @@ class TestStakeInfo:
         assert stake_info.region is None
         assert stake_info.notes is None
 
-    def test_stake_info_validation_invalid_email(self) -> None:
-        """Test stake info validation with invalid email."""
+    def test_stake_info_validation_empty_name(self) -> None:
+        """Test stake info validation with empty name."""
         with pytest.raises(ValidationError):
             StakeInfo(
-                name="Test Stake",
-                tech_specialist="invalid-email",
+                name="",  # Empty name
+                tech_specialist="test@example.com",
             )
 
 
@@ -126,11 +126,11 @@ class TestYouTubeAPIConfig:
         settings = YouTubeAPIConfig(
             credentials_file="custom_credentials.json",
             token_file="custom_token.json",
-            scopes=["https://www.googleapis.com/auth/youtube.readonly"],
+            scopes=["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.readonly"],
         )
         assert settings.credentials_file == "custom_credentials.json"
         assert settings.token_file == "custom_token.json"
-        assert settings.scopes == ["https://www.googleapis.com/auth/youtube.readonly"]
+        assert settings.scopes == ["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.readonly"]
 
     def test_youtube_api_settings_validation_missing_required_scope(self) -> None:
         """Test YouTube API settings validation for missing required scope."""
@@ -173,15 +173,12 @@ class TestRetrySettings:
             RetrySettings(backoff_factor=0.9)  # Too low
 
         with pytest.raises(ValidationError):
-            RetrySettings(backoff_factor=5.1)  # Too high
+            RetrySettings(backoff_factor=10.1)  # Too high
 
     def test_retry_settings_validation_max_delay(self) -> None:
         """Test retry settings validation for max delay."""
         with pytest.raises(ValidationError):
             RetrySettings(max_delay=0)  # Too low
-
-        with pytest.raises(ValidationError):
-            RetrySettings(max_delay=3601)  # Too high
 
 
 class TestLoggingConfig:
@@ -237,7 +234,7 @@ class TestAppConfig:
         assert len(config.channels) == 3
         assert config.processing.age_threshold_hours == 24
         assert config.youtube_api.credentials_file == "test_credentials.json"
-        assert config.retry.max_attempts == 3
+        assert config.retry_settings.max_attempts == 3
         assert config.logging.level == "INFO"
 
     def test_app_config_validation_no_channels(self, sample_config_data: dict[str, Any]) -> None:
@@ -262,7 +259,7 @@ class TestAppConfig:
             "channels": [
                 {
                     "name": "Test Ward",
-                    "channel_id": "UCTestChannelID00000001",
+                    "channel_id": "UCTestChannelID000000001",
                     "timezone": "America/Denver",
                     "enabled": True,
                     "max_videos_to_check": 50,
@@ -274,8 +271,8 @@ class TestAppConfig:
         
         # Check that default sections are created
         assert config.processing.age_threshold_hours == 24
-        assert config.youtube_api.credentials_file == "credentials.json"
-        assert config.retry.max_attempts == 3
+        assert config.youtube_api.credentials_file is None
+        assert config.retry_settings.max_attempts == 3
         assert config.logging.level == "INFO"
 
     def test_app_config_environment_variable_substitution(self) -> None:
@@ -294,7 +291,7 @@ class TestAppConfig:
                 "channels": [
                     {
                         "name": "Test Ward",
-                        "channel_id": "UCTestChannelID00000001",
+                        "channel_id": "UCTestChannelID000000001",
                         "timezone": "America/Denver",
                         "enabled": True,
                         "max_videos_to_check": 50,

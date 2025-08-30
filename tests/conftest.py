@@ -79,7 +79,7 @@ def sample_config_data() -> dict[str, Any]:
             "backoff_factor": 2.0,
             "max_delay": 300,
         },
-        "logging_config": {
+        "logging": {
             "level": "INFO",
             "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             "file_path": None,
@@ -107,9 +107,8 @@ def app_config(sample_config_data: dict[str, Any]) -> AppConfig:
 def sample_channel() -> Channel:
     """Create a sample channel for testing."""
     return Channel(
-        id="UCTestChannelID00000001",
+        id="UCTestChannelID000000001",
         name="Test Ward 1",
-        timezone="America/Denver",
     )
 
 
@@ -191,9 +190,6 @@ def sample_processing_result_success(sample_video_old: Video) -> ProcessingResul
     return ProcessingResult(
         video=sample_video_old,
         status=VideoStatus.PROCESSED,
-        old_visibility=VideoVisibility.PUBLIC,
-        new_visibility=VideoVisibility.UNLISTED,
-        processing_time_seconds=1.5,
     )
 
 
@@ -204,7 +200,6 @@ def sample_processing_result_failed(sample_video_old: Video) -> ProcessingResult
         video=sample_video_old,
         status=VideoStatus.FAILED,
         error_message="API rate limit exceeded",
-        processing_time_seconds=0.5,
     )
 
 
@@ -291,7 +286,7 @@ def mock_config_provider(app_config: AppConfig) -> Mock:
     mock.get_token_file.return_value = app_config.youtube_api.token_file
     mock.get_oauth_scopes.return_value = app_config.youtube_api.scopes
     mock.get_retry_settings.return_value = app_config.retry
-    mock.get_logging_config.return_value = app_config.logging_config
+    mock.get_logging_config.return_value = app_config.logging
     return mock
 
 
