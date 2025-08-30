@@ -262,8 +262,6 @@ def mock_visibility_manager() -> AsyncMock:
     mock.change_visibility.return_value = ProcessingResult(
         video=Mock(),
         status=VideoStatus.PROCESSED,
-        old_visibility=VideoVisibility.PUBLIC,
-        new_visibility=VideoVisibility.UNLISTED,
     )
     mock.change_visibility_batch.return_value = []
     mock.get_current_visibility.return_value = VideoVisibility.PUBLIC
@@ -275,9 +273,7 @@ def mock_visibility_manager() -> AsyncMock:
 def mock_config_provider(app_config: AppConfig) -> Mock:
     """Create a mock configuration provider."""
     mock = Mock()
-    mock.get_channels.return_value = [
-        ChannelConfig(**channel_data) for channel_data in app_config.channels
-    ]
+    mock.get_channels.return_value = app_config.channels
     mock.get_age_threshold_hours.return_value = app_config.processing.age_threshold_hours
     mock.get_target_visibility.return_value = app_config.processing.target_visibility
     mock.get_max_videos_per_channel.return_value = app_config.processing.max_videos_per_channel
@@ -285,7 +281,7 @@ def mock_config_provider(app_config: AppConfig) -> Mock:
     mock.get_credentials_file.return_value = app_config.youtube_api.credentials_file
     mock.get_token_file.return_value = app_config.youtube_api.token_file
     mock.get_oauth_scopes.return_value = app_config.youtube_api.scopes
-    mock.get_retry_settings.return_value = app_config.retry
+    mock.get_retry_settings.return_value = app_config.retry_settings
     mock.get_logging_config.return_value = app_config.logging
     return mock
 

@@ -48,12 +48,10 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-            ProcessingResult(
-                video=sample_video_old,
-                status=VideoStatus.PROCESSED,
-                old_visibility=VideoVisibility.PUBLIC,
-                new_visibility=VideoVisibility.UNLISTED,
-            )
+                    ProcessingResult(
+            video=sample_video_old,
+            status=VideoStatus.PROCESSED,
+        )
         ]
 
         # Execute
@@ -96,12 +94,10 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-            ProcessingResult(
-                video=sample_video_old,
-                status=VideoStatus.PROCESSED,
-                old_visibility=VideoVisibility.PUBLIC,
-                new_visibility=VideoVisibility.UNLISTED,
-            )
+                    ProcessingResult(
+            video=sample_video_old,
+            status=VideoStatus.PROCESSED,
+        )
         ]
 
         # Execute
@@ -273,16 +269,14 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-            ProcessingResult(
-                video=sample_video_old,
-                status=VideoStatus.PROCESSED,
-                old_visibility=VideoVisibility.PUBLIC,
-                new_visibility=VideoVisibility.UNLISTED,
-            )
+                    ProcessingResult(
+            video=sample_video_old,
+            status=VideoStatus.PROCESSED,
+        )
         ]
 
         # Execute - process only the first channel
-        channel_ids = ["UCTestChannelID00000001"]
+        channel_ids = ["UCTestChannelID000000001"]
         result = await archiving_service.process_specific_channels(channel_ids)
 
         # Verify
@@ -298,13 +292,13 @@ class TestDefaultArchivingService:
     ) -> None:
         """Test processing specific channels with invalid channel ID."""
         # Execute with invalid channel ID
-        channel_ids = ["UCInvalidChannelID123"]
+        channel_ids = ["UCInvalidChannelID000123"]
         result = await archiving_service.process_specific_channels(channel_ids)
 
         # Verify
         assert result.has_errors is True
         assert len(result.channel_results) == 1
-        assert result.channel_results["UCInvalidChannelID123"].error_message == "Channel not found in configuration"
+        assert result.channel_results["UCInvalidChannelID000123"].error_message == "Channel not found in configuration"
 
     @pytest.mark.asyncio
     async def test_dry_run_all_channels(
