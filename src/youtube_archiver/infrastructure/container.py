@@ -11,6 +11,9 @@ from youtube_archiver.domain.services.configuration_provider import Configuratio
 from youtube_archiver.domain.services.video_repository import VideoRepository
 from youtube_archiver.domain.services.visibility_manager import VisibilityManager
 from youtube_archiver.infrastructure.config.yaml_provider import YamlConfigurationProvider
+from youtube_archiver.infrastructure.youtube.auth_manager import YouTubeAuthManager
+from youtube_archiver.infrastructure.youtube.video_repository import YouTubeVideoRepository
+from youtube_archiver.infrastructure.youtube.visibility_manager import YouTubeVisibilityManager
 
 
 class Container(containers.DeclarativeContainer):
@@ -31,18 +34,24 @@ class Container(containers.DeclarativeContainer):
         config_path=config_file_path,
     )
 
-    # Core Services (will be implemented later)
-    # These are placeholders for the concrete implementations
+    # YouTube Authentication Manager
+    youtube_auth_manager = providers.Singleton(
+        YouTubeAuthManager,
+        credentials_file=configuration_provider.provided.get_credentials_file,
+        token_file=configuration_provider.provided.get_token_file,
+        scopes=configuration_provider.provided.get_oauth_scopes,
+    )
+
+    # Core Services
+    video_repository = providers.Singleton(
+        YouTubeVideoRepository,
+        auth_manager=youtube_auth_manager,
+    )
     
-    # video_repository = providers.Singleton(
-    #     YouTubeVideoRepository,
-    #     config_provider=configuration_provider,
-    # )
-    
-    # visibility_manager = providers.Singleton(
-    #     YouTubeVisibilityManager,
-    #     config_provider=configuration_provider,
-    # )
+    visibility_manager = providers.Singleton(
+        YouTubeVisibilityManager,
+        auth_manager=youtube_auth_manager,
+    )
     
     # archiving_service = providers.Singleton(
     #     DefaultArchivingService,
@@ -84,14 +93,17 @@ def get_configuration_provider(container: Container) -> ConfigurationProvider:
 
 def get_video_repository(container: Container) -> VideoRepository:
     """Get the video repository service."""
-    # return container.video_repository()
-    raise NotImplementedError("Video repository implementation not yet available")
+    return container.video_repository()
 
 
 def get_visibility_manager(container: Container) -> VisibilityManager:
     """Get the visibility manager service."""
-    # return container.visibility_manager()
-    raise NotImplementedError("Visibility manager implementation not yet available")
+    return container.visibility_manager()
+
+
+def get_youtube_auth_manager(container: Container) -> YouTubeAuthManager:
+    """Get the YouTube authentication manager."""
+    return container.youtube_auth_manager()
 
 
 def get_archiving_service(container: Container) -> ArchivingService:
