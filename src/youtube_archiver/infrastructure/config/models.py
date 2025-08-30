@@ -113,7 +113,7 @@ class AppConfig(BaseModel):
 
     # Core settings
     stake_info: StakeInfo
-    channels: list[ChannelConfig] = Field(..., min_items=1, description="List of channels to process")
+    channels: list[ChannelConfig] = Field(..., description="List of channels to process", min_length=1)
     
     # Processing configuration
     processing: ProcessingSettings = Field(default_factory=ProcessingSettings)
