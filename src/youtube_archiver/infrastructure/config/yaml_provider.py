@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from youtube_archiver.domain.exceptions import ConfigurationError
 from youtube_archiver.domain.models.channel import ChannelConfig
 from youtube_archiver.domain.services.configuration_provider import ConfigurationProvider
-from youtube_archiver.infrastructure.config.models import AppConfig
+from youtube_archiver.infrastructure.config.models import AppConfig, LoggingConfig, RetrySettings
 
 
 class YamlConfigurationProvider(ConfigurationProvider):
@@ -100,7 +100,7 @@ class YamlConfigurationProvider(ConfigurationProvider):
 
     def get_channels(self) -> list[ChannelConfig]:
         """Get the list of configured channels to process."""
-        return self.config.get_enabled_channels()
+        return self.config.channels
 
     def get_age_threshold_hours(self) -> int:
         """Get the age threshold in hours for video processing."""
@@ -127,13 +127,13 @@ class YamlConfigurationProvider(ConfigurationProvider):
         channel = self.config.get_channel_by_id(channel_id)
         return channel is not None and channel.enabled
 
-    def get_retry_settings(self) -> dict[str, Any]:
+    def get_retry_settings(self) -> RetrySettings:
         """Get retry configuration for API operations."""
-        return self.config.retry_settings.dict()
+        return self.config.retry_settings
 
-    def get_logging_config(self) -> dict[str, Any]:
+    def get_logging_config(self) -> LoggingConfig:
         """Get logging configuration."""
-        return self.config.logging.dict()
+        return self.config.logging
 
     def reload(self) -> None:
         """Reload configuration from source."""

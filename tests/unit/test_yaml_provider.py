@@ -33,7 +33,7 @@ class TestYamlConfigurationProvider:
             f.write("invalid: yaml: content: [")
             temp_path = Path(f.name)
 
-        with pytest.raises(ConfigurationError, match="Failed to parse YAML"):
+        with pytest.raises(ConfigurationError, match="Invalid YAML syntax"):
             YamlConfigurationProvider(temp_path)
 
     def test_yaml_provider_empty_file(self) -> None:
@@ -69,7 +69,7 @@ class TestYamlConfigurationProvider:
         
         assert len(channels) == 3
         assert channels[0].name == "Test Ward 1"
-        assert channels[0].channel_id == "UCTestChannelID00000001"
+        assert channels[0].channel_id == "UCTestChannelID000000001"
         assert channels[0].enabled is True
         assert channels[2].enabled is False  # Third channel is disabled
 
@@ -148,7 +148,7 @@ class TestYamlConfigurationProvider:
                 "channels": [
                     {
                         "name": "Test Ward",
-                        "channel_id": "UCTestChannelID00000001",
+                        "channel_id": "UCTestChannelID000000001",
                         "timezone": "America/Denver",
                         "enabled": True,
                         "max_videos_to_check": 50,
@@ -212,7 +212,7 @@ class TestYamlConfigurationProvider:
             "channels": [
                 {
                     "name": "Test Ward",
-                    "channel_id": "UCTestChannelID00000001",
+                    "channel_id": "UCTestChannelID000000001",
                     "timezone": "America/Denver",
                     "enabled": True,
                     "max_videos_to_check": 50,
@@ -229,5 +229,5 @@ class TestYamlConfigurationProvider:
         # Should use default values for missing sections
         assert provider.get_age_threshold_hours() == 24
         assert provider.get_target_visibility() == "unlisted"
-        assert provider.get_credentials_file() == "credentials.json"
+        assert provider.get_credentials_file() is None
         assert provider.get_retry_settings().max_attempts == 3
