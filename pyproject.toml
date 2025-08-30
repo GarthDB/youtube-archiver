@@ -63,7 +63,7 @@ dev = [
 ]
 
 [project.scripts]
-youtube-archiver = "youtube_archiver.main:main"
+youtube-archiver = "youtube_archiver.cli.main:main"
 
 [project.urls]
 Homepage = "https://github.com/lds-tech/youtube-archiver"
