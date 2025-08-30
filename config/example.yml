@@ -11,45 +11,45 @@ stake_info:
 # YouTube Channels to Process
 channels:
   - name: "1st Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_1"
+    channel_id: "UCExampleChannelID001234"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "2nd Ward" 
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_2"
+    channel_id: "UCExampleChannelID001235"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "3rd Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_3"
+    channel_id: "UCExampleChannelID001236"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "4th Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_4"
+    channel_id: "UCExampleChannelID001237"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "5th Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_5"
+    channel_id: "UCExampleChannelID001238"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "6th Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_6"
+    channel_id: "UCExampleChannelID001239"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
     enabled: true
     max_videos_to_check: 50
 
   - name: "7th Ward"
-    channel_id: "UC_EXAMPLE_CHANNEL_ID_7"
+    channel_id: "UCExampleChannelID001240"  # Replace with actual 24-character channel ID
     timezone: "America/Denver"
-    enabled: true
+    enabled: false  # Disabled by default for testing
     max_videos_to_check: 50
 
 # Processing Settings

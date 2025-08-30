@@ -14,6 +14,7 @@ from youtube_archiver.infrastructure.config.yaml_provider import YamlConfigurati
 from youtube_archiver.infrastructure.youtube.auth_manager import YouTubeAuthManager
 from youtube_archiver.infrastructure.youtube.video_repository import YouTubeVideoRepository
 from youtube_archiver.infrastructure.youtube.visibility_manager import YouTubeVisibilityManager
+from youtube_archiver.application.services.archiving_service import DefaultArchivingService
 
 
 class Container(containers.DeclarativeContainer):
@@ -34,31 +35,8 @@ class Container(containers.DeclarativeContainer):
         config_path=config_file_path,
     )
 
-    # YouTube Authentication Manager
-    youtube_auth_manager = providers.Singleton(
-        YouTubeAuthManager,
-        credentials_file=configuration_provider.provided.get_credentials_file,
-        token_file=configuration_provider.provided.get_token_file,
-        scopes=configuration_provider.provided.get_oauth_scopes,
-    )
-
-    # Core Services
-    video_repository = providers.Singleton(
-        YouTubeVideoRepository,
-        auth_manager=youtube_auth_manager,
-    )
-    
-    visibility_manager = providers.Singleton(
-        YouTubeVisibilityManager,
-        auth_manager=youtube_auth_manager,
-    )
-    
-    # archiving_service = providers.Singleton(
-    #     DefaultArchivingService,
-    #     video_repository=video_repository,
-    #     visibility_manager=visibility_manager,
-    #     config_provider=configuration_provider,
-    # )
+    # Note: Services are created lazily in the getter functions
+    # to avoid dependency injection complexity with method calls
 
 
 def create_container(config_path: str | Path) -> Container:
@@ -93,20 +71,34 @@ def get_configuration_provider(container: Container) -> ConfigurationProvider:
 
 def get_video_repository(container: Container) -> VideoRepository:
     """Get the video repository service."""
-    return container.video_repository()
+    auth_manager = get_youtube_auth_manager(container)
+    return YouTubeVideoRepository(auth_manager)
 
 
 def get_visibility_manager(container: Container) -> VisibilityManager:
     """Get the visibility manager service."""
-    return container.visibility_manager()
+    auth_manager = get_youtube_auth_manager(container)
+    return YouTubeVisibilityManager(auth_manager)
 
 
 def get_youtube_auth_manager(container: Container) -> YouTubeAuthManager:
     """Get the YouTube authentication manager."""
-    return container.youtube_auth_manager()
+    config_provider = get_configuration_provider(container)
+    return YouTubeAuthManager(
+        credentials_file=config_provider.get_credentials_file(),
+        token_file=config_provider.get_token_file(),
+        scopes=config_provider.get_oauth_scopes(),
+    )
 
 
 def get_archiving_service(container: Container) -> ArchivingService:
     """Get the main archiving service."""
-    # return container.archiving_service()
-    raise NotImplementedError("Archiving service implementation not yet available")
+    config_provider = get_configuration_provider(container)
+    video_repository = get_video_repository(container)
+    visibility_manager = get_visibility_manager(container)
+    
+    return DefaultArchivingService(
+        video_repository=video_repository,
+        visibility_manager=visibility_manager,
+        config_provider=config_provider,
+    )

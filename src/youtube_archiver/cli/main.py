@@ -20,6 +20,7 @@ from youtube_archiver.domain.exceptions import (
 )
 from youtube_archiver.infrastructure.container import (
     create_container,
+    get_archiving_service,
     get_configuration_provider,
     get_video_repository,
     get_visibility_manager,
@@ -344,10 +345,121 @@ async def _process_videos(
     verbose: bool,
 ) -> None:
     """Process videos with progress tracking."""
-    # This is a placeholder - we'll implement the full processing logic
-    # when we create the ArchivingService
-    console.print("\n[yellow]🚧 Processing functionality coming soon![/yellow]")
-    console.print("This will be implemented with the ArchivingService.")
+    archiving_service = get_archiving_service(container)
+    
+    # Show processing start message
+    if specific_channels:
+        console.print(f"\n[cyan]🎯 Processing {len(specific_channels)} specific channels...[/cyan]")
+    else:
+        console.print("\n[cyan]📺 Processing all enabled channels...[/cyan]")
+    
+    # Create progress tracker
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        
+        if specific_channels:
+            task = progress.add_task("Processing specific channels...", total=None)
+            result = await archiving_service.process_specific_channels(specific_channels)
+        else:
+            if dry_run:
+                task = progress.add_task("Running dry-run analysis...", total=None)
+                result = await archiving_service.dry_run_all_channels()
+            else:
+                task = progress.add_task("Processing all channels...", total=None)
+                result = await archiving_service.process_all_channels()
+        
+        progress.update(task, description="Processing complete!")
+    
+    # Display results
+    _display_processing_results(result, dry_run, verbose)
+
+
+def _display_processing_results(result: Any, dry_run: bool, verbose: bool) -> None:
+    """Display the results of video processing."""
+    from youtube_archiver.cli.utils import display_success_message, display_warning_message
+    
+    stats = result.overall_stats
+    
+    # Create results table
+    table = Table(title="📊 Processing Results")
+    table.add_column("Channel", style="cyan")
+    table.add_column("Videos Checked", justify="right")
+    table.add_column("Videos Processed", justify="right", style="green")
+    table.add_column("Videos Skipped", justify="right", style="yellow")
+    table.add_column("Videos Failed", justify="right", style="red")
+    table.add_column("Status", justify="center")
+    
+    # Add channel results
+    for channel_result in result.channel_results.values():
+        channel_stats = channel_result.stats
+        
+        if channel_result.has_errors:
+            status = "[red]❌ Error[/red]"
+        elif channel_stats.videos_processed > 0:
+            status = "[green]✅ Processed[/green]"
+        elif channel_stats.videos_skipped > 0:
+            status = "[yellow]⏭️ Skipped[/yellow]"
+        else:
+            status = "[dim]✅ Up to date[/dim]"
+        
+        table.add_row(
+            channel_result.channel_name,
+            str(channel_stats.total_videos_checked),
+            str(channel_stats.videos_processed),
+            str(channel_stats.videos_skipped),
+            str(channel_stats.videos_failed),
+            status
+        )
+    
+    console.print(table)
+    
+    # Overall summary
+    console.print(f"\n[bold]📈 Overall Summary:[/bold]")
+    console.print(f"🏢 Channels processed: {stats.channels_processed}")
+    console.print(f"📺 Total videos checked: {stats.total_videos_checked}")
+    console.print(f"✅ Videos processed: {stats.videos_processed}")
+    console.print(f"⏭️ Videos skipped: {stats.videos_skipped}")
+    console.print(f"❌ Videos failed: {stats.videos_failed}")
+    console.print(f"📊 Success rate: {stats.success_rate:.1f}%")
+    console.print(f"⏱️ Processing time: {stats.processing_time_seconds:.1f} seconds")
+    
+    # Show errors if any
+    if result.has_errors:
+        console.print(f"\n[red]⚠️ Errors occurred during processing:[/red]")
+        
+        if result.global_error:
+            console.print(f"• Global error: {result.global_error}")
+        
+        for channel_result in result.failed_channels:
+            if channel_result.error_message:
+                console.print(f"• {channel_result.channel_name}: {channel_result.error_message}")
+            
+            if verbose:
+                for failed_result in channel_result.failed_results:
+                    console.print(f"  - {failed_result.video.title[:50]}...: {failed_result.error_message}")
+    
+    # Final status message
+    if dry_run:
+        if stats.total_videos_checked > 0:
+            display_warning_message(
+                f"DRY RUN: Found {stats.total_videos_checked} videos that would be processed. "
+                "Run without --dry-run to make actual changes."
+            )
+        else:
+            display_success_message("DRY RUN: No videos found that need processing. All channels are up to date!")
+    else:
+        if stats.videos_processed > 0:
+            display_success_message(
+                f"Successfully processed {stats.videos_processed} videos! "
+                f"Videos are now set to unlisted visibility."
+            )
+        elif stats.total_videos_checked > 0:
+            display_success_message("All videos are already up to date. No changes needed!")
+        else:
+            display_warning_message("No videos found to process. Check your channel configuration.")
 
 
 async def _show_summary(
@@ -356,72 +468,87 @@ async def _show_summary(
     verbose: bool,
 ) -> None:
     """Show summary of eligible videos."""
-    config_provider = get_configuration_provider(container)
-    video_repo = get_video_repository(container)
+    archiving_service = get_archiving_service(container)
     
-    channels = config_provider.get_channels()
-    if specific_channels:
-        channels = [c for c in channels if c.channel_id in specific_channels]
+    # Get summary from archiving service
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Analyzing channels...", total=None)
+        summary = await archiving_service.get_eligible_videos_summary()
+        progress.update(task, description="Analysis complete!")
     
-    table = Table(title="Video Summary")
+    # Create summary table
+    table = Table(title="📊 Video Summary")
     table.add_column("Channel", style="cyan")
     table.add_column("Total Videos", justify="right")
     table.add_column("Eligible Videos", justify="right", style="yellow")
+    table.add_column("Public Videos", justify="right", style="red")
+    table.add_column("Live Videos", justify="right", style="blue")
     table.add_column("Status", justify="center")
     
-    total_videos = 0
-    total_eligible = 0
+    # Filter channels if specific ones requested
+    channels_to_show = summary.get("by_channel", {})
+    if specific_channels:
+        channels_to_show = {
+            channel_id: data for channel_id, data in channels_to_show.items()
+            if channel_id in specific_channels
+        }
     
-    for channel_config in channels:
-        if not channel_config.enabled:
+    # Add channel rows
+    for channel_id, channel_data in channels_to_show.items():
+        if "error" in channel_data:
             table.add_row(
-                channel_config.name,
+                channel_data.get("name", "Unknown"),
                 "-",
                 "-",
-                "[dim]Disabled[/dim]"
-            )
-            continue
-        
-        try:
-            channel = channel_config.to_domain()
-            videos = await video_repo.get_channel_videos(
-                channel, 
-                max_results=channel_config.max_videos_to_check
-            )
-            
-            eligible_videos = [v for v in videos if v.is_eligible_for_archiving]
-            
-            total_videos += len(videos)
-            total_eligible += len(eligible_videos)
-            
-            status = "✅ Ready" if eligible_videos else "✅ Up to date"
-            
-            table.add_row(
-                channel_config.name,
-                str(len(videos)),
-                str(len(eligible_videos)),
-                status
-            )
-            
-        except Exception as e:
-            table.add_row(
-                channel_config.name,
                 "-",
                 "-",
-                f"[red]❌ Error[/red]"
+                "[red]❌ Error[/red]"
             )
             if verbose:
-                console.print(f"[dim]Error for {channel_config.name}: {e}[/dim]")
+                console.print(f"[dim]Error for {channel_data.get('name', 'Unknown')}: {channel_data['error']}[/dim]")
+        else:
+            status_map = {
+                "ready": "[yellow]🎯 Ready[/yellow]",
+                "up_to_date": "[green]✅ Up to date[/green]",
+                "error": "[red]❌ Error[/red]",
+            }
+            status = status_map.get(channel_data.get("status", "unknown"), "❓ Unknown")
+            
+            table.add_row(
+                channel_data.get("name", "Unknown"),
+                str(channel_data.get("total_videos", 0)),
+                str(channel_data.get("eligible_videos", 0)),
+                str(channel_data.get("public_videos", 0)),
+                str(channel_data.get("live_videos", 0)),
+                status
+            )
     
     console.print(table)
     
-    # Summary totals
-    console.print(f"\n[bold]Total Summary:[/bold]")
-    console.print(f"📺 Total videos checked: {total_videos}")
-    console.print(f"🎯 Videos eligible for processing: {total_eligible}")
+    # Overall summary
+    console.print(f"\n[bold]📈 Overall Summary:[/bold]")
+    console.print(f"🏢 Total channels: {summary.get('total_channels', 0)}")
+    console.print(f"✅ Enabled channels: {summary.get('enabled_channels', 0)}")
+    console.print(f"📺 Total videos: {summary.get('total_videos', 0)}")
+    console.print(f"🎯 Eligible for processing: {summary.get('eligible_videos', 0)}")
+    console.print(f"📅 Generated at: {summary.get('generated_at', 'Unknown')}")
     
-    if total_eligible > 0:
-        console.print(f"\n[yellow]💡 Tip:[/yellow] Run with --dry-run first to see what would be changed.")
+    # Show tips
+    eligible_count = summary.get('eligible_videos', 0)
+    if eligible_count > 0:
+        console.print(f"\n[yellow]💡 Tips:[/yellow]")
+        console.print(f"• Run 'youtube-archiver process --dry-run' to preview changes")
+        console.print(f"• {eligible_count} videos will be changed from public to unlisted")
+        if eligible_count > 50:
+            console.print(f"• Large backlog detected - consider processing in batches")
+    else:
+        console.print(f"\n[green]🎉 All channels are up to date![/green]")
+        console.print(f"• No videos need visibility changes")
+        console.print(f"• Run this command weekly to monitor new uploads")
 
 
 def _display_user_info(user_info: dict[str, Any]) -> None:
