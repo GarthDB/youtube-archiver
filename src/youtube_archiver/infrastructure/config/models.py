@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -36,7 +36,7 @@ class LoggingConfig(BaseModel):
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         description="Log format string",
     )
-    file_path: str | None = Field(
+    file_path: Optional[str] = Field(
         default=None, description="Log file path (None for console only)"
     )
     max_file_size: int = Field(
@@ -108,8 +108,8 @@ class StakeInfo(BaseModel):
     tech_specialist: str = Field(
         ..., min_length=1, description="Tech specialist name or email"
     )
-    region: str | None = Field(default=None, description="Geographic region")
-    notes: str | None = Field(default=None, description="Additional notes")
+    region: Optional[str] = Field(default=None, description="Geographic region")
+    notes: Optional[str] = Field(default=None, description="Additional notes")
 
     class Config:
         """Pydantic configuration."""
@@ -120,10 +120,10 @@ class StakeInfo(BaseModel):
 class YouTubeAPIConfig(BaseModel):
     """Configuration for YouTube API access."""
 
-    credentials_file: str | None = Field(
+    credentials_file: Optional[str] = Field(
         default=None, description="Path to OAuth2 credentials file"
     )
-    token_file: str | None = Field(
+    token_file: Optional[str] = Field(
         default=None, description="Path to stored access token"
     )
     scopes: list[str] = Field(
