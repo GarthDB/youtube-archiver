@@ -200,6 +200,9 @@ class DefaultArchivingService(ArchivingService):
             ]
             if breach_videos:
                 for v in breach_videos:
+                    # NOTE: The literal prefix "POLICY BREACH" is grepped by
+                    # .github/workflows/archive.yml to fail the job loudly.
+                    # Keep these in sync if you rename this log message.
                     logger.warning(
                         "POLICY BREACH: '%s' (id=%s) has been public for %.1f hours "
                         "(exceeds %gh limit) in channel %s",

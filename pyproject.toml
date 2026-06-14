@@ -157,8 +157,8 @@ ignore = [
 # Pytest Configuration
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --cov=youtube_archiver --cov-report=term-missing --cov-report=html --cov-fail-under=60"
-# Note: 60 is a ratchet floor — raise it as test coverage improves (YouTube infra is currently ~16-24%)
+addopts = "-ra -q --strict-markers --cov=youtube_archiver --cov-report=term-missing --cov-report=html --cov-fail-under=65"
+# Note: 65 is a ratchet floor — raise it as test coverage improves (visibility_manager still ~16%)
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]

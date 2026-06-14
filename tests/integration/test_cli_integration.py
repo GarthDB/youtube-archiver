@@ -374,3 +374,60 @@ class TestCLIIntegration:
         assert "setup" in result.output
         assert "status" in result.output
         assert "reset" in result.output
+
+    def test_auth_export_token_only(
+        self,
+        cli_runner: CliRunner,
+        temp_config_file: Path,
+        tmp_path: Path,
+    ) -> None:
+        """Test auth export command with a token file present."""
+        import base64
+
+        token_file = tmp_path / "token.json"
+        token_file.write_text('{"token": "fake-refresh-token"}')
+
+        with patch(
+            "youtube_archiver.cli.main.get_configuration_provider"
+        ) as mock_get_provider:
+            mock_provider = Mock()
+            mock_provider.get_token_file.return_value = str(token_file)
+            mock_provider.get_credentials_file.return_value = str(
+                tmp_path / "credentials.json"
+            )
+            mock_get_provider.return_value = mock_provider
+
+            result = cli_runner.invoke(
+                cli, ["--config", str(temp_config_file), "auth", "export"]
+            )
+
+        assert result.exit_code == 0
+        assert "YOUTUBE_TOKEN_JSON" in result.output
+        expected_b64 = base64.b64encode(token_file.read_bytes()).decode("ascii")
+        assert expected_b64 in result.output
+
+    def test_auth_export_missing_token_exits_with_error(
+        self,
+        cli_runner: CliRunner,
+        temp_config_file: Path,
+        tmp_path: Path,
+    ) -> None:
+        """Test auth export exits 1 with a clear message when token file is absent."""
+        with patch(
+            "youtube_archiver.cli.main.get_configuration_provider"
+        ) as mock_get_provider:
+            mock_provider = Mock()
+            mock_provider.get_token_file.return_value = str(
+                tmp_path / "nonexistent_token.json"
+            )
+            mock_provider.get_credentials_file.return_value = str(
+                tmp_path / "credentials.json"
+            )
+            mock_get_provider.return_value = mock_provider
+
+            result = cli_runner.invoke(
+                cli, ["--config", str(temp_config_file), "auth", "export"]
+            )
+
+        assert result.exit_code == 1
+        assert "Token file not found" in result.output
