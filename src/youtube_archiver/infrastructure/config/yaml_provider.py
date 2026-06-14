@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +90,6 @@ class YamlConfigurationProvider(ConfigurationProvider):
 
     def _substitute_string_env_vars(self, value: str) -> str:
         """Substitute environment variables in a string value."""
-        import re
-
         # Pattern to match ${VAR_NAME} or ${VAR_NAME:default}
         pattern = r"\$\{([^}:]+)(?::([^}]*))?\}"
 

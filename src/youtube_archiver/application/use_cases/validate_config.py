@@ -66,7 +66,11 @@ class ValidateConfigUseCase:
 
             # Validate retry settings
             retry_settings = self.config_provider.get_retry_settings()
-            max_attempts = retry_settings.get("max_attempts", 0)
+            max_attempts = (
+                retry_settings.get("max_attempts", 0)
+                if isinstance(retry_settings, dict)
+                else getattr(retry_settings, "max_attempts", 0)
+            )
             if max_attempts < 1 or max_attempts > 10:
                 errors.append(
                     f"Invalid max retry attempts: {max_attempts} (must be 1-10)"
@@ -74,7 +78,11 @@ class ValidateConfigUseCase:
 
             # Validate logging configuration
             logging_config = self.config_provider.get_logging_config()
-            log_level = logging_config.get("level", "").upper()
+            log_level = (
+                logging_config.get("level", "")
+                if isinstance(logging_config, dict)
+                else getattr(logging_config, "level", "")
+            ).upper()
             valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
             if log_level not in valid_levels:
                 errors.append(

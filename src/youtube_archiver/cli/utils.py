@@ -124,7 +124,7 @@ def create_video_table(videos: list[Any], title: str = "Videos") -> Table:
         published = video.published_at.strftime("%Y-%m-%d")
 
         # Format eligibility
-        eligible = "✅ Yes" if video.is_eligible_for_archiving else "❌ No"
+        eligible = "✅ Yes" if video.is_eligible_for_archiving() else "❌ No"
 
         # Format visibility with colors
         visibility_colors = {

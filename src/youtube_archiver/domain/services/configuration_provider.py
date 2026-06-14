@@ -1,7 +1,7 @@
 """Abstract base class for configuration management."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from youtube_archiver.domain.models.channel import ChannelConfig
 
@@ -111,22 +111,22 @@ class ConfigurationProvider(ABC):
         pass
 
     @abstractmethod
-    def get_retry_settings(self) -> Union[dict[str, Any], Any]:
+    def get_retry_settings(self) -> Any:
         """
         Get retry configuration for API operations.
 
         Returns:
-            Retry settings (dict or RetrySettings model)
+            Retry settings (RetrySettings model or equivalent dict)
         """
         pass
 
     @abstractmethod
-    def get_logging_config(self) -> Union[dict[str, Any], Any]:
+    def get_logging_config(self) -> Any:
         """
         Get logging configuration.
 
         Returns:
-            Logging settings (dict or LoggingConfig model)
+            Logging settings (LoggingConfig model or equivalent dict)
         """
         pass
 

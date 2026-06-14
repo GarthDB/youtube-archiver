@@ -30,6 +30,8 @@ from youtube_archiver.domain.services.visibility_manager import VisibilityManage
 
 logger = logging.getLogger(__name__)
 
+_POLICY_MAX_AGE_HOURS = 168.0  # 1 week: maximum allowed time a live video stays public
+
 
 class DefaultArchivingService(ArchivingService):
     """
@@ -58,7 +60,9 @@ class DefaultArchivingService(ArchivingService):
         self.visibility_manager = visibility_manager
         self.config_provider = config_provider
 
-    async def process_all_channels(self) -> BatchProcessingResult:
+    async def process_all_channels(
+        self, _dry_run_override: bool | None = None
+    ) -> BatchProcessingResult:
         """
         Process all configured channels in a batch operation.
 
@@ -89,7 +93,9 @@ class DefaultArchivingService(ArchivingService):
                 channel_config: Any,
             ) -> ChannelProcessingResult:
                 async with semaphore:
-                    return await self.process_channel(channel_config.to_domain())
+                    return await self.process_channel(
+                        channel_config.to_domain(), _dry_run_override
+                    )
 
             # Process all channels concurrently but with limits
             tasks = [
@@ -140,7 +146,9 @@ class DefaultArchivingService(ArchivingService):
             batch_result.complete()
             return batch_result
 
-    async def process_channel(self, channel: Channel) -> ChannelProcessingResult:
+    async def process_channel(
+        self, channel: Channel, _dry_run_override: bool | None = None
+    ) -> ChannelProcessingResult:
         """
         Process a single channel's videos.
 
@@ -163,7 +171,11 @@ class DefaultArchivingService(ArchivingService):
             target_visibility = VideoVisibility(
                 self.config_provider.get_target_visibility()
             )
-            dry_run = self.config_provider.get_dry_run_mode()
+            dry_run = (
+                _dry_run_override
+                if _dry_run_override is not None
+                else self.config_provider.get_dry_run_mode()
+            )
             age_threshold_hours = self.config_provider.get_age_threshold_hours()
 
             # Fetch videos from the channel
@@ -179,7 +191,6 @@ class DefaultArchivingService(ArchivingService):
             logger.info(f"Found {len(videos)} videos in {channel.name}")
 
             # Warn about policy breaches: live videos still public beyond 1-week maximum
-            _POLICY_MAX_AGE_HOURS = 168.0
             breach_videos = [
                 v
                 for v in videos
@@ -354,19 +365,7 @@ class DefaultArchivingService(ArchivingService):
             BatchProcessingResult showing what would be processed
         """
         logger.info("Starting dry-run of all channels")
-
-        # Temporarily enable dry-run mode
-        self.config_provider.get_dry_run_mode()
-
-        # Note: We can't actually change the config provider's dry run mode
-        # since it's read-only, so we'll handle this in the processing logic
-
-        try:
-            return await self.process_all_channels()
-        finally:
-            # In a real implementation, we might restore the original setting
-            # but since our config provider is read-only, this is just for clarity
-            pass
+        return await self.process_all_channels(_dry_run_override=True)
 
     async def get_eligible_videos_summary(self) -> dict[str, Any]:
         """

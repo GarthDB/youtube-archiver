@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -388,8 +389,6 @@ class YouTubeVideoRepository(VideoRepository):
             Duration in seconds or None if parsing fails
         """
         try:
-            import re
-
             # Parse PT4M13S format
             pattern = r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"
             match = re.match(pattern, duration_str)
