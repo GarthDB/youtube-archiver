@@ -15,7 +15,7 @@ An automated tool to manage YouTube live stream visibility for LDS ward sacramen
 
 ## Technical Approach
 - **Primary**: Local Python script that can be run manually
-- **Secondary**: GitHub Actions workflow for automated scheduling (Monday evenings)
+- **Secondary**: GitHub Actions workflow for automated scheduling (twice weekly: Tuesday & Friday, 05:00 UTC)
 - **API**: YouTube Data API v3 for video management
 - **Authentication**: Google OAuth2 with appropriate channel management permissions
 
@@ -30,5 +30,5 @@ An automated tool to manage YouTube live stream visibility for LDS ward sacramen
 ## Success Criteria
 - Automated identification and processing of sacrament meeting live streams
 - Reliable visibility changes without manual intervention
-- Configurable scheduling (Monday evenings)
+- Configurable scheduling (twice weekly via GitHub Actions cron)
 - Safe operation with minimal risk of unintended changes

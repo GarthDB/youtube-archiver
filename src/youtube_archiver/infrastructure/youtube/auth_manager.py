@@ -128,12 +128,22 @@ class YouTubeAuthManager:
                 str(self.credentials_file), self.scopes
             )
 
-            # Try to run local server flow, fallback to console flow
+            # Try to run local server flow; fall back to manual code exchange
+            # for headless environments (flow.run_console() was removed in
+            # google-auth-oauthlib >=1.0).
             try:
                 credentials = flow.run_local_server(port=0, open_browser=True)
             except Exception:
-                # Fallback for headless environments
-                credentials = flow.run_console()
+                # Headless fallback: print auth URL and exchange code manually
+                auth_url, _ = cast(Any, flow).authorization_url(prompt="consent")
+                print(
+                    f"\nCould not open a browser automatically.\n"
+                    f"Visit this URL to authorize access:\n\n  {auth_url}\n\n"
+                    f"Then paste the authorization code below."
+                )
+                code = input("Enter the authorization code: ").strip()
+                cast(Any, flow).fetch_token(code=code)
+                credentials = flow.credentials
 
             return cast(Credentials, credentials)
 

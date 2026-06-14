@@ -61,10 +61,10 @@ First, see what you're dealing with:
 
 ```bash
 # Check all channels in dry-run mode
-youtube-archiver --config config/config.yml --dry-run
+youtube-archiver --config config/config.yml process --dry-run
 
 # Or check one channel at a time
-youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1 --dry-run
+youtube-archiver --config config/config.yml process --channels UC_CHANNEL_ID_1 --dry-run
 ```
 
 **Expected output:**
@@ -85,16 +85,16 @@ For large backlogs, consider processing gradually:
 #### Option A: One Channel at a Time
 ```bash
 # Process first channel
-youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1
+youtube-archiver --config config/config.yml process --channels UC_CHANNEL_ID_1
 
 # Wait and verify, then continue
-youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_2
+youtube-archiver --config config/config.yml process --channels UC_CHANNEL_ID_2
 ```
 
 #### Option B: Batch Processing with Limits
 ```bash
-# Process with conservative limits
-youtube-archiver --config config/config.yml --max-videos 100
+# Process with conservative limits (set max_videos_per_channel in your config)
+youtube-archiver --config config/config.yml process
 ```
 
 ### Step 3: Monitor and Verify
@@ -215,7 +215,7 @@ Your initial setup is successful when:
 If you encounter issues during initial setup:
 
 1. **Check the logs** for specific error messages
-2. **Run with increased verbosity**: `--log-level DEBUG`
+2. **Run with increased verbosity**: add `--verbose` flag (e.g. `youtube-archiver --verbose --config config/config.yml process`)
 3. **Test with a single channel** first
 4. **Review API quotas** in Google Cloud Console
 5. **Open an issue** on GitHub with logs and configuration (redacted)
