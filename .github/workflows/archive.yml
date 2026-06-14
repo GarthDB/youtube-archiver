@@ -75,6 +75,11 @@ jobs:
           YOUTUBE_CREDENTIALS_JSON: ${{ secrets.YOUTUBE_CREDENTIALS_JSON }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
         run: |
+          # Fail immediately if secrets are not configured rather than writing a garbage file
+          if [ -z "$YOUTUBE_CREDENTIALS_JSON" ] || [ -z "$YOUTUBE_TOKEN_JSON" ]; then
+            echo "::error::YOUTUBE_CREDENTIALS_JSON and/or YOUTUBE_TOKEN_JSON secret is not set. See docs/fork-setup.md Step 4."
+            exit 1
+          fi
           echo "$YOUTUBE_CREDENTIALS_JSON" | base64 --decode > credentials.json
           echo "$YOUTUBE_TOKEN_JSON"        | base64 --decode > token.json
 
@@ -91,7 +96,8 @@ jobs:
           TARGET_VISIBILITY: ${{ vars.TARGET_VISIBILITY }}
         run: |
           set -o pipefail
-          youtube-archiver process --config config/ci.yml 2>&1 | tee archiver.log
+          # Note: --config is a group option and must precede the subcommand
+          youtube-archiver --config config/ci.yml process 2>&1 | tee archiver.log
 
       - name: Run archiver (manual dispatch)
         if: github.event_name == 'workflow_dispatch'
@@ -106,15 +112,18 @@ jobs:
           TARGET_VISIBILITY: ${{ vars.TARGET_VISIBILITY }}
         run: |
           set -o pipefail
+          # Note: --config is a group option and must precede the subcommand
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            youtube-archiver process --config config/ci.yml --dry-run 2>&1 | tee archiver.log
+            youtube-archiver --config config/ci.yml process --dry-run 2>&1 | tee archiver.log
           else
-            youtube-archiver process --config config/ci.yml 2>&1 | tee archiver.log
+            youtube-archiver --config config/ci.yml process 2>&1 | tee archiver.log
           fi
 
       - name: Check for policy breaches
         # Fail the job loudly if any video has been public >168h, so a missed-run
         # shows up as a failed workflow and triggers GitHub notifications.
+        # NOTE: This grep matches the literal string "POLICY BREACH" emitted by
+        # application/services/archiving_service.py — keep these in sync.
         run: |
           if [ -f archiver.log ] && grep -q "POLICY BREACH" archiver.log; then
             echo "::error::One or more videos were public for >168 hours (policy breach)." \

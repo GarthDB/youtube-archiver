@@ -737,7 +737,7 @@ def _show_auth_help() -> None:
             "5. Download the credentials.json file\n"
             "6. Place it in your project directory\n"
             "7. Update your config.yml with the correct path\n\n"
-            "For detailed instructions, see: docs/youtube-api-setup.md",
+            "For detailed instructions, see: docs/initial-setup-guide.md",
             title="Setup Help",
             border_style="yellow",
         )

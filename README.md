@@ -57,7 +57,7 @@ This tool helps LDS stake tech specialists automatically change the visibility o
    ```
 
 5. **Set up YouTube API credentials**:
-   - Follow the [YouTube API Setup Guide](docs/youtube-api-setup.md)
+   - Follow the [Initial Setup Guide](docs/initial-setup-guide.md)
    - Place your `credentials.json` file in the project root
 
 ### Usage
@@ -68,43 +68,59 @@ This tool helps LDS stake tech specialists automatically change the visibility o
 
 **1. Start with a dry-run to see what would be processed**:
 ```bash
-youtube-archiver --config config/config.yml --dry-run
+youtube-archiver --config config/config.yml process --dry-run
 ```
 
 **2. Review the output and consider processing one channel at a time initially**:
 ```bash
-youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1 --dry-run
+youtube-archiver --config config/config.yml process --channels UC_CHANNEL_ID_1 --dry-run
 ```
 
 **3. When ready, process the backlog** (this may take several minutes):
 ```bash
-youtube-archiver --config config/config.yml
+youtube-archiver --config config/config.yml process
 ```
 
-#### Regular Usage (Weekly)
+#### Regular Usage
 
-After the initial backlog is processed, regular runs should only find 1-3 videos per week per channel:
+After the initial backlog is processed, the recommended approach is the **automated GitHub Actions workflow** (twice weekly, Tue/Fri) — see the Deployment section below. For manual one-off runs:
 
 ```bash
-youtube-archiver --config config/config.yml
+youtube-archiver --config config/config.yml process
 ```
 
 #### Additional Options
 
+**Preview eligible videos without making changes**:
+```bash
+youtube-archiver --config config/config.yml summary
+```
+
 **Process specific channels**:
 ```bash
-youtube-archiver --config config/config.yml --channels UC_CHANNEL_ID_1 UC_CHANNEL_ID_2
+youtube-archiver --config config/config.yml process --channels UC_CHANNEL_ID_1 UC_CHANNEL_ID_2
 ```
 
 **Increase processing limits for backlog cleanup**:
 ```bash
-# Temporarily increase the video check limit in config.yml
+# Temporarily increase the video check limit in config.yml:
 # max_videos_per_channel: 200  # Default is 50
+# Then run:
+youtube-archiver --config config/config.yml process
+```
+
+**Check authentication status**:
+```bash
+youtube-archiver --config config/config.yml auth status
 ```
 
 ## Configuration
 
 The application uses YAML configuration files with Pydantic validation. See [`config/example.yml`](config/example.yml) for a complete example.
+
+> **For automated (GitHub Actions) use**, the workflow reads [`config/ci.yml`](config/ci.yml), which is
+> already committed and drives all settings from GitHub Actions Variables — no secrets are ever stored
+> in YAML files.
 
 ### Key Configuration Sections
 
@@ -172,7 +188,7 @@ src/youtube_archiver/
 
 Run the tool manually on your local machine:
 ```bash
-youtube-archiver --config config/config.yml
+youtube-archiver --config config/config.yml process
 ```
 
 ### GitHub Actions (Recommended)
@@ -187,8 +203,8 @@ not a secret).
 **Quick setup:**
 
 1. Fork this repository and enable Actions on the fork.
-2. Run `youtube-archiver auth setup` locally to generate a refresh token.
-3. Run `scripts/setup-github-secrets.sh` (or `youtube-archiver auth export` for manual paste).
+2. Run `youtube-archiver --config config/example.yml auth setup` locally to generate a refresh token.
+3. Run `scripts/setup-github-secrets.sh` (or `youtube-archiver --config config/example.yml auth export --credentials` for manual paste).
 4. Set the `WARD_CHANNEL_ID` Variable in repo Settings.
 5. Trigger a dry-run via Actions → Run workflow to verify everything works.
 
@@ -198,7 +214,7 @@ refresh token from expiring after 7 days.
 
 ## Contributing
 
-We welcome contributions from other LDS tech specialists! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions from other LDS tech specialists!
 
 ### Development Workflow
 

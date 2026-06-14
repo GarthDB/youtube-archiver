@@ -73,7 +73,7 @@ pip install -e .
 
 # Authenticate — a browser window will open.
 # Sign in as the Google account that has Manager access to the ward's YouTube channel.
-youtube-archiver auth setup --config config/example.yml
+youtube-archiver --config config/example.yml auth setup
 ```
 
 After completing the browser flow, a `token.json` file is saved in the project root.
@@ -101,7 +101,7 @@ everything in your fork's Settings.
 #### Export base64 values
 
 ```bash
-youtube-archiver auth export --credentials --config config/example.yml
+youtube-archiver --config config/example.yml auth export --credentials
 ```
 
 This prints two base64 blobs you'll need to paste.
