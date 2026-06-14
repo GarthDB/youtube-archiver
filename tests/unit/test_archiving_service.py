@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging.handlers
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -497,3 +499,90 @@ class TestDefaultArchivingService:
         assert len(permissions) == 2
         assert permissions[sample_video_old.id] is True
         assert permissions[sample_video_new.id] is False
+
+    @pytest.mark.asyncio
+    async def test_process_channel_uses_configured_age_threshold(
+        self,
+        archiving_service: DefaultArchivingService,
+        mock_video_repository: AsyncMock,
+        mock_visibility_manager: AsyncMock,
+        mock_config_provider: Mock,
+        sample_channel: Channel,
+    ) -> None:
+        """Configured age_threshold_hours is passed to video eligibility check."""
+        # Create a video that is 36 hours old (eligible at 24h but NOT at 48h)
+        video_36h = Video(
+            id="test_video_36h",
+            title="36h Old Meeting",
+            channel_id=sample_channel.id,
+            published_at=datetime.now(timezone.utc) - timedelta(hours=36),
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+        )
+
+        mock_video_repository.get_channel_videos.return_value = [video_36h]
+        mock_visibility_manager.change_visibility_batch.return_value = [
+            ProcessingResult(video=video_36h, status=VideoStatus.PROCESSED)
+        ]
+
+        # Default threshold (24h) → video is eligible
+        mock_config_provider.get_age_threshold_hours.return_value = 24.0
+        result_24 = await archiving_service.process_channel(sample_channel)
+        assert result_24.stats.videos_processed == 1
+
+        # Threshold raised to 48h → same video is no longer eligible
+        mock_config_provider.get_age_threshold_hours.return_value = 48.0
+        result_48 = await archiving_service.process_channel(sample_channel)
+        assert result_48.stats.videos_processed == 0
+
+    @pytest.mark.asyncio
+    async def test_process_channel_logs_policy_breach_warning(
+        self,
+        archiving_service: DefaultArchivingService,
+        mock_video_repository: AsyncMock,
+        mock_visibility_manager: AsyncMock,
+        mock_config_provider: Mock,
+        sample_channel: Channel,
+    ) -> None:
+        """A still-public live video older than 168 hours triggers a POLICY BREACH warning."""
+        import logging
+
+        # Video that has been public for 8 days (>168h) — a missed-run scenario
+        video_8d = Video(
+            id="test_video_breach",
+            title="Very Old Meeting",
+            channel_id=sample_channel.id,
+            published_at=datetime.now(timezone.utc) - timedelta(days=8),
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+        )
+
+        mock_video_repository.get_channel_videos.return_value = [video_8d]
+        mock_visibility_manager.change_visibility_batch.return_value = [
+            ProcessingResult(video=video_8d, status=VideoStatus.PROCESSED)
+        ]
+
+        with self._capture_warnings() as warning_records:
+            await archiving_service.process_channel(sample_channel)
+
+        breach_warnings = [r for r in warning_records if "POLICY BREACH" in r.getMessage()]
+        assert len(breach_warnings) >= 1, "Expected at least one POLICY BREACH warning"
+
+    @staticmethod
+    def _capture_warnings():
+        """Context manager that collects WARNING-level log records."""
+        import logging
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _ctx():
+            handler = logging.handlers.MemoryHandler(capacity=100, flushLevel=logging.CRITICAL)
+            logger = logging.getLogger("youtube_archiver")
+            logger.addHandler(handler)
+            try:
+                yield handler.buffer
+            finally:
+                logger.removeHandler(handler)
+                handler.close()
+
+        return _ctx()

@@ -225,6 +225,107 @@ def reset(ctx: click.Context) -> None:
         sys.exit(1)
 
 
+@auth.command()
+@click.option(
+    "--credentials",
+    is_flag=True,
+    default=False,
+    help="Also export credentials.json (OAuth client ID + secret)",
+)
+@click.pass_context
+def export(ctx: click.Context, credentials: bool) -> None:
+    """Export auth token as base64 for storing as a GitHub Actions secret.
+
+    Prints the base64-encoded token.json (and optionally credentials.json) so
+    you can paste the values into GitHub → Settings → Secrets and variables →
+    Actions.  Nothing is sent anywhere — the values are only printed to your
+    terminal.
+
+    Typical workflow:
+
+    \b
+    1. youtube-archiver auth setup          # authenticate once locally
+    2. youtube-archiver auth export         # copy YOUTUBE_TOKEN_JSON value
+    3. youtube-archiver auth export --credentials  # copy YOUTUBE_CREDENTIALS_JSON value
+    4. Paste into GitHub secrets, or run:  scripts/setup-github-secrets.sh
+    """
+    import base64
+
+    config_path = ctx.obj["config_path"]
+    verbose = ctx.obj["verbose"]
+
+    try:
+        container = create_container(config_path)
+        config_provider = get_configuration_provider(container)
+
+        token_path = Path(config_provider.get_token_file() or "token.json")
+        creds_path = Path(config_provider.get_credentials_file() or "credentials.json")
+
+        # Token file
+        if not token_path.exists():
+            console.print(
+                f"[red]❌ Token file not found:[/red] {token_path}\n"
+                "[yellow]💡 Run 'youtube-archiver auth setup' first to generate it.[/yellow]"
+            )
+            sys.exit(1)
+
+        token_b64 = base64.b64encode(token_path.read_bytes()).decode("ascii")
+
+        console.print(Panel(
+            "[bold]Secret name:[/bold] [cyan]YOUTUBE_TOKEN_JSON[/cyan]\n\n"
+            "[bold]Value:[/bold]\n"
+            f"[dim]{token_b64}[/dim]",
+            title="GitHub Secret — token.json",
+            border_style="green",
+        ))
+        console.print(
+            "\n[green]→[/green] GitHub → Settings → Secrets and variables → Actions → "
+            "[cyan]New repository secret[/cyan]\n"
+            f"  Name:  [cyan]YOUTUBE_TOKEN_JSON[/cyan]\n"
+            f"  Value: (the base64 string above)"
+        )
+
+        # Credentials file (optional)
+        if credentials:
+            if not creds_path.exists():
+                console.print(
+                    f"\n[red]❌ Credentials file not found:[/red] {creds_path}\n"
+                    "[yellow]💡 Download credentials.json from Google Cloud Console.[/yellow]"
+                )
+                sys.exit(1)
+
+            creds_b64 = base64.b64encode(creds_path.read_bytes()).decode("ascii")
+
+            console.print("\n")
+            console.print(Panel(
+                "[bold]Secret name:[/bold] [cyan]YOUTUBE_CREDENTIALS_JSON[/cyan]\n\n"
+                "[bold]Value:[/bold]\n"
+                f"[dim]{creds_b64}[/dim]",
+                title="GitHub Secret — credentials.json",
+                border_style="green",
+            ))
+            console.print(
+                "\n[green]→[/green] GitHub → Settings → Secrets and variables → Actions → "
+                "[cyan]New repository secret[/cyan]\n"
+                f"  Name:  [cyan]YOUTUBE_CREDENTIALS_JSON[/cyan]\n"
+                f"  Value: (the base64 string above)"
+            )
+
+        console.print(
+            "\n[dim]💡 Tip: run scripts/setup-github-secrets.sh for an automated upload "
+            "if you have the gh CLI installed.[/dim]"
+        )
+
+    except ConfigurationError as e:
+        console.print(f"[red]❌ Configuration Error:[/red] {e}")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]❌ Unexpected Error:[/red] {e}")
+        if verbose:
+            console.print_exception()
+        sys.exit(1)
+
+
 @cli.command()
 @click.pass_context
 def validate(ctx: click.Context) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,9 @@ import yaml
 
 from youtube_archiver.domain.exceptions import ConfigurationError
 from youtube_archiver.infrastructure.config.yaml_provider import YamlConfigurationProvider
+
+# Path to the committed CI config template used by the GitHub Actions workflow
+_CI_CONFIG = Path(__file__).parent.parent.parent / "config" / "ci.yml"
 
 
 class TestYamlConfigurationProvider:
@@ -225,9 +229,63 @@ class TestYamlConfigurationProvider:
             temp_path = Path(f.name)
 
         provider = YamlConfigurationProvider(temp_path)
-        
+
         # Should use default values for missing sections
         assert provider.get_age_threshold_hours() == 24
         assert provider.get_target_visibility() == "unlisted"
         assert provider.get_credentials_file() is None
         assert provider.get_retry_settings().max_attempts == 3
+
+
+class TestCIConfigTemplate:
+    """Tests for config/ci.yml — the committed CI config template."""
+
+    def test_ci_config_exists(self) -> None:
+        """config/ci.yml must exist in the repo (it's committed, not gitignored)."""
+        assert _CI_CONFIG.exists(), (
+            f"config/ci.yml not found at {_CI_CONFIG}. "
+            "This file should be committed to the repository."
+        )
+
+    def test_ci_config_loads_with_required_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """CI config loads successfully when WARD_CHANNEL_ID is set."""
+        monkeypatch.setenv("WARD_CHANNEL_ID", "UCTestChannelID000000001")
+        monkeypatch.setenv("WARD_NAME", "Test Ward")
+        monkeypatch.setenv("STAKE_NAME", "Test Stake")
+        monkeypatch.setenv("TECH_SPECIALIST", "tech@example.com")
+        monkeypatch.setenv("WARD_TIMEZONE", "America/Denver")
+        monkeypatch.setenv("TARGET_VISIBILITY", "unlisted")
+
+        provider = YamlConfigurationProvider(_CI_CONFIG)
+
+        channels = provider.get_channels()
+        assert len(channels) == 1
+        assert channels[0].channel_id == "UCTestChannelID000000001"
+        assert channels[0].name == "Test Ward"
+        assert channels[0].enabled is True
+        assert provider.get_target_visibility() == "unlisted"
+        assert provider.get_age_threshold_hours() == 24
+
+    def test_ci_config_defaults_apply_without_optional_vars(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Optional Variables fall back to sensible defaults when not set."""
+        monkeypatch.setenv("WARD_CHANNEL_ID", "UCTestChannelID000000001")
+        # Ensure optional vars are NOT set
+        for var in ("WARD_NAME", "STAKE_NAME", "TECH_SPECIALIST", "WARD_TIMEZONE", "TARGET_VISIBILITY"):
+            monkeypatch.delenv(var, raising=False)
+
+        provider = YamlConfigurationProvider(_CI_CONFIG)
+
+        assert provider.get_target_visibility() == "unlisted"
+        channels = provider.get_channels()
+        assert channels[0].channel_id == "UCTestChannelID000000001"
+
+    def test_ci_config_fails_without_ward_channel_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """CI config raises ConfigurationError when WARD_CHANNEL_ID is not set."""
+        monkeypatch.delenv("WARD_CHANNEL_ID", raising=False)
+
+        with pytest.raises(ConfigurationError):
+            YamlConfigurationProvider(_CI_CONFIG)

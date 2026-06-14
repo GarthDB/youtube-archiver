@@ -146,21 +146,17 @@ def sample_video_old() -> Video:
 
 @pytest.fixture
 def sample_video_new() -> Video:
-    """Create a sample new video (not eligible for archiving)."""
+    """Create a sample new video (not eligible for archiving, published 12 hours ago)."""
     return Video(
         id="test_video_new_456",
         title="Recent Sacrament Meeting - Test Ward",
         description="Test description",
-        published_at=datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        - timedelta(hours=12),  # 12 hours old
+        published_at=datetime.now(timezone.utc) - timedelta(hours=12),  # always 12h ago
         visibility=VideoVisibility.PUBLIC,
         duration_seconds=3600,
         view_count=25,
         is_live_content=True,
-                    channel_id="UCTestChannelID000000001",
-
+        channel_id="UCTestChannelID000000001",
     )
 
 

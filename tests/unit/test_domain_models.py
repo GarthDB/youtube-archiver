@@ -41,13 +41,19 @@ class TestVideo:
     ) -> None:
         """Test video eligibility for archiving."""
         # Old public video should be eligible
-        assert sample_video_old.is_eligible_for_archiving is True
+        assert sample_video_old.is_eligible_for_archiving() is True
 
         # New video should not be eligible (too recent)
-        assert sample_video_new.is_eligible_for_archiving is False
+        assert sample_video_new.is_eligible_for_archiving() is False
 
         # Already unlisted video should not be eligible
-        assert sample_video_unlisted.is_eligible_for_archiving is False
+        assert sample_video_unlisted.is_eligible_for_archiving() is False
+
+    def test_video_eligibility_custom_threshold(self, sample_video_old: Video) -> None:
+        """Test that a custom age threshold is respected."""
+        # sample_video_old is ~48h old; eligible at 24h but not at 72h
+        assert sample_video_old.is_eligible_for_archiving(age_threshold_hours=24.0) is True
+        assert sample_video_old.is_eligible_for_archiving(age_threshold_hours=72.0) is False
 
     def test_video_eligibility_non_live_content(self) -> None:
         """Test that non-live content is not eligible for archiving."""
@@ -62,7 +68,39 @@ class TestVideo:
             is_live_content=False,  # Not live content
             channel_id="UCTestChannelID000000001",
         )
-        assert video.is_eligible_for_archiving is False
+        assert video.is_eligible_for_archiving() is False
+
+    def test_video_age_uses_broadcast_at_when_set(self) -> None:
+        """broadcast_at takes precedence over published_at for age calculation."""
+        # Publish date is 2 days ago, but the broadcast only started 1 hour ago
+        broadcast_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        video = Video(
+            id="test_broadcast_at",
+            title="Live Meeting",
+            channel_id="UCTestChannelID000000001",
+            published_at=datetime.now(timezone.utc) - timedelta(days=2),
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+            broadcast_at=broadcast_time,
+        )
+        # Age should reflect broadcast_at (~1h), not published_at (~48h)
+        assert video.age_hours < 2.0
+        assert video.age_hours >= 1.0
+        # Not yet eligible because it aired less than 24h ago
+        assert video.is_eligible_for_archiving() is False
+
+    def test_video_age_falls_back_to_published_at(self) -> None:
+        """When broadcast_at is not set, age_hours uses published_at."""
+        published = datetime.now(timezone.utc) - timedelta(hours=36)
+        video = Video(
+            id="test_no_broadcast_at",
+            title="Meeting",
+            channel_id="UCTestChannelID000000001",
+            published_at=published,
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+        )
+        assert video.age_hours >= 35.0  # close to 36h
 
     def test_video_str_representation(self, sample_video_old: Video) -> None:
         """Test video string representation."""

@@ -272,16 +272,19 @@ class YouTubeVideoRepository(VideoRepository):
             
             # Check if it's live content
             is_live_content = self._is_live_content(item)
-            
+
+            # Extract broadcast start time from liveStreamingDetails (preferred for age calculation)
+            broadcast_at = self._parse_broadcast_time(item)
+
             # Parse optional fields
             statistics = item.get("statistics", {})
-            content_details = item.get("content_details", {})
-            
+            content_details = item.get("contentDetails", {})  # camelCase — matches YouTube API response
+
             # Parse duration (ISO 8601 format like PT4M13S)
             duration_seconds = None
             if "duration" in content_details:
                 duration_seconds = self._parse_duration(content_details["duration"])
-            
+
             return Video(
                 id=item["id"],
                 title=snippet["title"],
@@ -289,6 +292,7 @@ class YouTubeVideoRepository(VideoRepository):
                 published_at=published_at,
                 visibility=visibility,
                 is_live_content=is_live_content,
+                broadcast_at=broadcast_at,
                 duration_seconds=duration_seconds,
                 view_count=int(statistics.get("viewCount", 0)),
                 description=snippet.get("description"),
@@ -298,6 +302,33 @@ class YouTubeVideoRepository(VideoRepository):
         except Exception as e:
             # Log the error but don't fail the entire batch
             print(f"Warning: Failed to parse video {item.get('id', 'unknown')}: {e}")
+            return None
+
+    def _parse_broadcast_time(self, item: dict[str, Any]) -> datetime | None:
+        """
+        Extract the actual broadcast start time from liveStreamingDetails.
+
+        Prefers actualStartTime (when the broadcast actually went live) and
+        falls back to scheduledStartTime.  Returns None for non-live videos
+        or when the field is absent.
+
+        Args:
+            item: YouTube API video item
+
+        Returns:
+            Broadcast start datetime (UTC-aware) or None
+        """
+        live_details = item.get("liveStreamingDetails")
+        if not live_details:
+            return None
+
+        start_time_str = live_details.get("actualStartTime") or live_details.get("scheduledStartTime")
+        if not start_time_str:
+            return None
+
+        try:
+            return datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
             return None
 
     def _is_live_content(self, item: dict[str, Any]) -> bool:

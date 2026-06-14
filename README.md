@@ -177,14 +177,24 @@ youtube-archiver --config config/config.yml
 
 ### GitHub Actions (Recommended)
 
-Set up automated execution using GitHub Actions:
+The automated workflow (`.github/workflows/archive.yml`) runs **twice a week**
+(Tuesday and Friday, 05:00 UTC) and can be triggered manually with a dry-run option.
 
-1. Fork this repository
-2. Add your configuration as repository secrets
-3. Enable the scheduled workflow
-4. The tool will run automatically every Monday evening
+Credentials are never committed — they live as **GitHub Secrets** (two files,
+base64-encoded).  Your channel ID is a **GitHub Actions Variable** (public info,
+not a secret).
 
-See [`.github/workflows/schedule.yml`](.github/workflows/schedule.yml) for details.
+**Quick setup:**
+
+1. Fork this repository and enable Actions on the fork.
+2. Run `youtube-archiver auth setup` locally to generate a refresh token.
+3. Run `scripts/setup-github-secrets.sh` (or `youtube-archiver auth export` for manual paste).
+4. Set the `WARD_CHANNEL_ID` Variable in repo Settings.
+5. Trigger a dry-run via Actions → Run workflow to verify everything works.
+
+See **[`docs/fork-setup.md`](docs/fork-setup.md)** for the complete step-by-step guide,
+including the critical Google Cloud OAuth consent screen setting that prevents your
+refresh token from expiring after 7 days.
 
 ## Contributing
 

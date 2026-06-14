@@ -158,21 +158,38 @@ class DefaultArchivingService(ArchivingService):
             max_videos = self.config_provider.get_max_videos_per_channel()
             target_visibility = VideoVisibility(self.config_provider.get_target_visibility())
             dry_run = self.config_provider.get_dry_run_mode()
-            
+            age_threshold_hours = self.config_provider.get_age_threshold_hours()
+
             # Fetch videos from the channel
             logger.debug(f"Fetching up to {max_videos} videos from {channel.name}")
             videos = await self.video_repository.get_channel_videos(
                 channel, max_results=max_videos
             )
-            
+
             if not videos:
                 logger.info(f"No videos found in channel {channel.name}")
                 return channel_result
-            
+
             logger.info(f"Found {len(videos)} videos in {channel.name}")
-            
-            # Filter for eligible videos
-            eligible_videos = [video for video in videos if video.is_eligible_for_archiving]
+
+            # Warn about policy breaches: live videos still public beyond 1-week maximum
+            _POLICY_MAX_AGE_HOURS = 168.0
+            breach_videos = [
+                v for v in videos
+                if v.is_live_content
+                and v.visibility == VideoVisibility.PUBLIC
+                and v.age_hours > _POLICY_MAX_AGE_HOURS
+            ]
+            if breach_videos:
+                for v in breach_videos:
+                    logger.warning(
+                        "POLICY BREACH: '%s' (id=%s) has been public for %.1f hours "
+                        "(exceeds %gh limit) in channel %s",
+                        v.title[:60], v.id, v.age_hours, _POLICY_MAX_AGE_HOURS, channel.name,
+                    )
+
+            # Filter for eligible videos using the configured age threshold
+            eligible_videos = [video for video in videos if video.is_eligible_for_archiving(age_threshold_hours)]
             
             if not eligible_videos:
                 logger.info(f"No eligible videos found in {channel.name}")
@@ -351,17 +368,19 @@ class DefaultArchivingService(ArchivingService):
             enabled_channels = [c for c in channels if c.enabled]
             summary["enabled_channels"] = len(enabled_channels)
             
+            age_threshold_hours = self.config_provider.get_age_threshold_hours()
+
             for channel_config in enabled_channels:
                 channel = channel_config.to_domain()
-                
+
                 try:
                     # Get videos for this channel
                     max_videos = channel_config.max_videos_to_check
                     videos = await self.video_repository.get_channel_videos(
                         channel, max_results=max_videos
                     )
-                    
-                    eligible_videos = [v for v in videos if v.is_eligible_for_archiving]
+
+                    eligible_videos = [v for v in videos if v.is_eligible_for_archiving(age_threshold_hours)]
                     
                     channel_summary = {
                         "name": channel_config.name,
