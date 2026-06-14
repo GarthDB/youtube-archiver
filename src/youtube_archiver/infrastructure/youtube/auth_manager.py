@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -78,7 +78,7 @@ class YouTubeAuthManager:
         # Try to load existing token
         if self.token_file.exists():
             try:
-                self._credentials = Credentials.from_authorized_user_file(  # type: ignore[no-untyped-call]
+                self._credentials = cast(Any, Credentials).from_authorized_user_file(
                     str(self.token_file), self.scopes
                 )
             except Exception as e:
@@ -93,7 +93,8 @@ class YouTubeAuthManager:
             and self._credentials.refresh_token
         ):
             try:
-                self._credentials.refresh(Request())  # type: ignore[no-untyped-call]
+                request = cast(Any, Request)()
+                cast(Any, self._credentials).refresh(request)
                 self._save_credentials()
             except Exception as e:
                 raise AuthenticationError(f"Failed to refresh credentials: {e}") from e
@@ -134,7 +135,7 @@ class YouTubeAuthManager:
                 # Fallback for headless environments
                 credentials = flow.run_console()
 
-            return credentials  # type: ignore[no-any-return]
+            return cast(Credentials, credentials)
 
         except Exception as e:
             raise AuthenticationError(
@@ -153,7 +154,7 @@ class YouTubeAuthManager:
 
             # Save credentials
             with open(self.token_file, "w", encoding="utf-8") as f:
-                f.write(self._credentials.to_json())  # type: ignore[no-untyped-call]
+                f.write(cast(Any, self._credentials).to_json())
 
         except Exception as e:
             # Don't fail if we can't save, just warn
@@ -169,7 +170,7 @@ class YouTubeAuthManager:
             try:
                 # Note: revoke method may not be available on all credential types
                 if hasattr(self._credentials, "revoke"):
-                    self._credentials.revoke(Request())  # type: ignore[no-untyped-call]
+                    cast(Any, self._credentials).revoke(cast(Any, Request)())
             except Exception:
                 pass  # Ignore revocation errors
 
