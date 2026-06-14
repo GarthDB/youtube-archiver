@@ -574,12 +574,11 @@ class TestDefaultArchivingService:
     def _capture_warnings():
         """Context manager that collects WARNING-level log records."""
         import logging
+        import logging.handlers
         from contextlib import contextmanager
 
         @contextmanager
         def _ctx():
-            import logging.handlers
-
             handler = logging.handlers.MemoryHandler(
                 capacity=100, flushLevel=logging.CRITICAL
             )
