@@ -11,7 +11,9 @@ import pytest
 import yaml
 
 from youtube_archiver.domain.exceptions import ConfigurationError
-from youtube_archiver.infrastructure.config.yaml_provider import YamlConfigurationProvider
+from youtube_archiver.infrastructure.config.yaml_provider import (
+    YamlConfigurationProvider,
+)
 
 # Path to the committed CI config template used by the GitHub Actions workflow
 _CI_CONFIG = Path(__file__).parent.parent.parent / "config" / "ci.yml"
@@ -70,7 +72,7 @@ class TestYamlConfigurationProvider:
         """Test getting channels from config."""
         provider = YamlConfigurationProvider(temp_config_file)
         channels = provider.get_channels()
-        
+
         assert len(channels) == 3
         assert channels[0].name == "Test Ward 1"
         assert channels[0].channel_id == "UCTestChannelID000000001"
@@ -137,12 +139,11 @@ class TestYamlConfigurationProvider:
 
     def test_environment_variable_expansion(self) -> None:
         """Test environment variable expansion in config values."""
-        import os
-        
+
         # Set test environment variables
         os.environ["TEST_CREDENTIALS"] = "env_credentials.json"
         os.environ["TEST_TOKEN"] = "env_token.json"
-        
+
         try:
             config_data = {
                 "stake_info": {
@@ -164,28 +165,38 @@ class TestYamlConfigurationProvider:
                 },
             }
 
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yml", delete=False
+            ) as f:
                 yaml.dump(config_data, f)
                 temp_path = Path(f.name)
 
             provider = YamlConfigurationProvider(temp_path)
-            
+
             # The provider should expand environment variables
             credentials_file = provider.get_credentials_file()
             token_file = provider.get_token_file()
-            
+
             # Note: The actual expansion would happen in the YAML loading process
             # For now, we test that the values are loaded correctly
-            assert "${TEST_CREDENTIALS}" in credentials_file or "env_credentials.json" in credentials_file
-            assert "${TEST_TOKEN:default_token.json}" in token_file or "env_token.json" in token_file
-            
+            assert (
+                "${TEST_CREDENTIALS}" in credentials_file
+                or "env_credentials.json" in credentials_file
+            )
+            assert (
+                "${TEST_TOKEN:default_token.json}" in token_file
+                or "env_token.json" in token_file
+            )
+
         finally:
             # Clean up environment variables
             for var in ["TEST_CREDENTIALS", "TEST_TOKEN"]:
                 if var in os.environ:
                     del os.environ[var]
 
-    def test_config_reload_on_file_change(self, sample_config_data: dict[str, Any]) -> None:
+    def test_config_reload_on_file_change(
+        self, sample_config_data: dict[str, Any]
+    ) -> None:
         """Test that config is reloaded when file changes."""
         # Create initial config file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
@@ -247,7 +258,9 @@ class TestCIConfigTemplate:
             "This file should be committed to the repository."
         )
 
-    def test_ci_config_loads_with_required_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_ci_config_loads_with_required_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """CI config loads successfully when WARD_CHANNEL_ID is set."""
         monkeypatch.setenv("WARD_CHANNEL_ID", "UCTestChannelID000000001")
         monkeypatch.setenv("WARD_NAME", "Test Ward")
@@ -272,7 +285,13 @@ class TestCIConfigTemplate:
         """Optional Variables fall back to sensible defaults when not set."""
         monkeypatch.setenv("WARD_CHANNEL_ID", "UCTestChannelID000000001")
         # Ensure optional vars are NOT set
-        for var in ("WARD_NAME", "STAKE_NAME", "TECH_SPECIALIST", "WARD_TIMEZONE", "TARGET_VISIBILITY"):
+        for var in (
+            "WARD_NAME",
+            "STAKE_NAME",
+            "TECH_SPECIALIST",
+            "WARD_TIMEZONE",
+            "TARGET_VISIBILITY",
+        ):
             monkeypatch.delenv(var, raising=False)
 
         provider = YamlConfigurationProvider(_CI_CONFIG)

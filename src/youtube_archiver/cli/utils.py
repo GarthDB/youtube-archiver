@@ -6,7 +6,13 @@ from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 console = Console()
@@ -34,35 +40,42 @@ def display_error_summary(errors: list[str]) -> None:
     """Display configuration or processing errors."""
     if not errors:
         return
-    
-    console.print(Panel(
-        "\n".join(f"• {error}" for error in errors),
-        title="[red]❌ Errors Found[/red]",
-        border_style="red"
-    ))
+
+    console.print(
+        Panel(
+            "\n".join(f"• {error}" for error in errors),
+            title="[red]❌ Errors Found[/red]",
+            border_style="red",
+        )
+    )
 
 
 def display_success_message(message: str) -> None:
     """Display a success message."""
-    console.print(Panel(
-        f"[green]{message}[/green]",
-        title="[green]✅ Success[/green]",
-        border_style="green"
-    ))
+    console.print(
+        Panel(
+            f"[green]{message}[/green]",
+            title="[green]✅ Success[/green]",
+            border_style="green",
+        )
+    )
 
 
 def display_warning_message(message: str) -> None:
     """Display a warning message."""
-    console.print(Panel(
-        f"[yellow]{message}[/yellow]",
-        title="[yellow]⚠️ Warning[/yellow]",
-        border_style="yellow"
-    ))
+    console.print(
+        Panel(
+            f"[yellow]{message}[/yellow]",
+            title="[yellow]⚠️ Warning[/yellow]",
+            border_style="yellow",
+        )
+    )
 
 
 def confirm_action(message: str, default: bool = False) -> bool:
     """Ask user for confirmation."""
     import click
+
     return click.confirm(message, default=default)
 
 
@@ -70,7 +83,7 @@ def format_duration(seconds: int | None) -> str:
     """Format duration in seconds to human-readable format."""
     if seconds is None:
         return "Unknown"
-    
+
     if seconds < 60:
         return f"{seconds}s"
     elif seconds < 3600:
@@ -87,7 +100,7 @@ def format_view_count(count: int | None) -> str:
     """Format view count in human-readable format."""
     if count is None:
         return "0"
-    
+
     if count < 1000:
         return str(count)
     elif count < 1000000:
@@ -105,14 +118,14 @@ def create_video_table(videos: list[Any], title: str = "Videos") -> Table:
     table.add_column("Views", justify="right")
     table.add_column("Visibility", justify="center")
     table.add_column("Eligible", justify="center")
-    
+
     for video in videos:
         # Format published date
         published = video.published_at.strftime("%Y-%m-%d")
-        
+
         # Format eligibility
         eligible = "✅ Yes" if video.is_eligible_for_archiving else "❌ No"
-        
+
         # Format visibility with colors
         visibility_colors = {
             "public": "[red]Public[/red]",
@@ -120,19 +133,18 @@ def create_video_table(videos: list[Any], title: str = "Videos") -> Table:
             "private": "[green]Private[/green]",
         }
         visibility = visibility_colors.get(
-            video.visibility.value, 
-            video.visibility.value
+            video.visibility.value, video.visibility.value
         )
-        
+
         table.add_row(
             video.title[:37] + "..." if len(video.title) > 40 else video.title,
             published,
             format_duration(video.duration_seconds),
             format_view_count(video.view_count),
             visibility,
-            eligible
+            eligible,
         )
-    
+
     return table
 
 
@@ -141,10 +153,10 @@ def display_channel_summary(channel_name: str, stats: dict[str, Any]) -> None:
     table = Table(title=f"📺 {channel_name}")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", justify="right", style="green")
-    
+
     table.add_row("Total Videos", str(stats.get("total_videos", 0)))
     table.add_row("Eligible Videos", str(stats.get("eligible_videos", 0)))
     table.add_row("Public Videos", str(stats.get("public_videos", 0)))
     table.add_row("Live Content", str(stats.get("live_videos", 0)))
-    
+
     console.print(table)

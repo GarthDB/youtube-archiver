@@ -126,16 +126,24 @@ class TestYouTubeAPIConfig:
         settings = YouTubeAPIConfig(
             credentials_file="custom_credentials.json",
             token_file="custom_token.json",
-            scopes=["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.readonly"],
+            scopes=[
+                "https://www.googleapis.com/auth/youtube",
+                "https://www.googleapis.com/auth/youtube.readonly",
+            ],
         )
         assert settings.credentials_file == "custom_credentials.json"
         assert settings.token_file == "custom_token.json"
-        assert settings.scopes == ["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.readonly"]
+        assert settings.scopes == [
+            "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.readonly",
+        ]
 
     def test_youtube_api_settings_validation_missing_required_scope(self) -> None:
         """Test YouTube API settings validation for missing required scope."""
         with pytest.raises(ValidationError):
-            YouTubeAPIConfig(scopes=["https://www.googleapis.com/auth/youtube.readonly"])
+            YouTubeAPIConfig(
+                scopes=["https://www.googleapis.com/auth/youtube.readonly"]
+            )
 
 
 class TestRetrySettings:
@@ -237,13 +245,17 @@ class TestAppConfig:
         assert config.retry_settings.max_attempts == 3
         assert config.logging.level == "INFO"
 
-    def test_app_config_validation_no_channels(self, sample_config_data: dict[str, Any]) -> None:
+    def test_app_config_validation_no_channels(
+        self, sample_config_data: dict[str, Any]
+    ) -> None:
         """Test app config validation with no channels."""
         sample_config_data["channels"] = []
         with pytest.raises(ValidationError, match="at least 1 item"):
             AppConfig(**sample_config_data)
 
-    def test_app_config_validation_invalid_channel(self, sample_config_data: dict[str, Any]) -> None:
+    def test_app_config_validation_invalid_channel(
+        self, sample_config_data: dict[str, Any]
+    ) -> None:
         """Test app config validation with invalid channel."""
         sample_config_data["channels"][0]["channel_id"] = "INVALID"
         with pytest.raises(ValidationError):
@@ -266,9 +278,9 @@ class TestAppConfig:
                 }
             ],
         }
-        
+
         config = AppConfig(**minimal_config)
-        
+
         # Check that default sections are created
         assert config.processing.age_threshold_hours == 24
         assert config.youtube_api.credentials_file is None
@@ -278,10 +290,10 @@ class TestAppConfig:
     def test_app_config_environment_variable_substitution(self) -> None:
         """Test app config with environment variable substitution."""
         import os
-        
+
         # Set test environment variable
         os.environ["TEST_CREDENTIALS_FILE"] = "test_env_credentials.json"
-        
+
         try:
             config_data = {
                 "stake_info": {
@@ -301,12 +313,12 @@ class TestAppConfig:
                     "credentials_file": "${TEST_CREDENTIALS_FILE}",
                 },
             }
-            
+
             config = AppConfig(**config_data)
             # Note: Environment variable substitution would be handled by the YAML provider
             # This test documents the expected behavior
             assert config.youtube_api.credentials_file == "${TEST_CREDENTIALS_FILE}"
-            
+
         finally:
             # Clean up environment variable
             if "TEST_CREDENTIALS_FILE" in os.environ:

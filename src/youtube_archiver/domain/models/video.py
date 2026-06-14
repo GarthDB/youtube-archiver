@@ -39,7 +39,9 @@ class Video:
     published_at: datetime
     visibility: VideoVisibility
     is_live_content: bool
-    broadcast_at: datetime | None = None  # Actual live-broadcast start time (preferred over published_at for age)
+    broadcast_at: datetime | None = (
+        None  # Actual live-broadcast start time (preferred over published_at for age)
+    )
     duration_seconds: int | None = None
     view_count: int | None = None
     description: str | None = None

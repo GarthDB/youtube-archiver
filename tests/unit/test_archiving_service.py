@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import logging.handlers
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from youtube_archiver.application.services.archiving_service import DefaultArchivingService
+from youtube_archiver.application.services.archiving_service import (
+    DefaultArchivingService,
+)
 from youtube_archiver.domain.exceptions import (
     APIError,
     AuthenticationError,
@@ -50,10 +51,10 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-                    ProcessingResult(
-            video=sample_video_old,
-            status=VideoStatus.PROCESSED,
-        )
+            ProcessingResult(
+                video=sample_video_old,
+                status=VideoStatus.PROCESSED,
+            )
         ]
 
         # Execute
@@ -96,10 +97,10 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-                    ProcessingResult(
-            video=sample_video_old,
-            status=VideoStatus.PROCESSED,
-        )
+            ProcessingResult(
+                video=sample_video_old,
+                status=VideoStatus.PROCESSED,
+            )
         ]
 
         # Execute
@@ -271,10 +272,10 @@ class TestDefaultArchivingService:
         # Setup mocks
         mock_video_repository.get_channel_videos.return_value = [sample_video_old]
         mock_visibility_manager.change_visibility_batch.return_value = [
-                    ProcessingResult(
-            video=sample_video_old,
-            status=VideoStatus.PROCESSED,
-        )
+            ProcessingResult(
+                video=sample_video_old,
+                status=VideoStatus.PROCESSED,
+            )
         ]
 
         # Execute - process only the first channel
@@ -300,7 +301,10 @@ class TestDefaultArchivingService:
         # Verify
         assert result.has_errors is True
         assert len(result.channel_results) == 1
-        assert result.channel_results["UCInvalidChannelID000123"].error_message == "Channel not found in configuration"
+        assert (
+            result.channel_results["UCInvalidChannelID000123"].error_message
+            == "Channel not found in configuration"
+        )
 
     @pytest.mark.asyncio
     async def test_dry_run_all_channels(
@@ -368,13 +372,10 @@ class TestDefaultArchivingService:
         assert summary["total_channels"] == 3
         assert summary["enabled_channels"] == 2
         assert "by_channel" in summary
-        
+
         # Check that error channels are handled
         channel_summaries = summary["by_channel"]
-        error_channels = [
-            ch for ch in channel_summaries.values() 
-            if "error" in ch
-        ]
+        error_channels = [ch for ch in channel_summaries.values() if "error" in ch]
         assert len(error_channels) == 1
 
     def test_validate_configuration_success(
@@ -545,7 +546,6 @@ class TestDefaultArchivingService:
         sample_channel: Channel,
     ) -> None:
         """A still-public live video older than 168 hours triggers a POLICY BREACH warning."""
-        import logging
 
         # Video that has been public for 8 days (>168h) — a missed-run scenario
         video_8d = Video(
@@ -565,7 +565,9 @@ class TestDefaultArchivingService:
         with self._capture_warnings() as warning_records:
             await archiving_service.process_channel(sample_channel)
 
-        breach_warnings = [r for r in warning_records if "POLICY BREACH" in r.getMessage()]
+        breach_warnings = [
+            r for r in warning_records if "POLICY BREACH" in r.getMessage()
+        ]
         assert len(breach_warnings) >= 1, "Expected at least one POLICY BREACH warning"
 
     @staticmethod
@@ -576,7 +578,11 @@ class TestDefaultArchivingService:
 
         @contextmanager
         def _ctx():
-            handler = logging.handlers.MemoryHandler(capacity=100, flushLevel=logging.CRITICAL)
+            import logging.handlers
+
+            handler = logging.handlers.MemoryHandler(
+                capacity=100, flushLevel=logging.CRITICAL
+            )
             logger = logging.getLogger("youtube_archiver")
             logger.addHandler(handler)
             try:
