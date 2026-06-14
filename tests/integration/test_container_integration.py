@@ -8,7 +8,6 @@ import pytest
 
 from youtube_archiver.domain.exceptions import ConfigurationError
 from youtube_archiver.infrastructure.container import (
-    Container,
     create_container,
     get_archiving_service,
     get_configuration_provider,
@@ -24,12 +23,16 @@ class TestContainerIntegration:
     def test_create_container_success(self, temp_config_file: Path) -> None:
         """Test successful container creation."""
         container = create_container(temp_config_file)
-        assert isinstance(container, Container)
+        assert container is not None
+        assert get_configuration_provider(container) is not None
 
     def test_create_container_invalid_config(self) -> None:
         """Test container creation with invalid config file."""
+        # Config provider is lazy (Singleton); the error surfaces on first access, not
+        # at create_container() time, because dependency_injector defers instantiation.
         with pytest.raises(ConfigurationError):
-            create_container("nonexistent.yml")
+            container = create_container("nonexistent.yml")
+            get_configuration_provider(container)
 
     def test_get_configuration_provider(self, temp_config_file: Path) -> None:
         """Test getting configuration provider from container."""

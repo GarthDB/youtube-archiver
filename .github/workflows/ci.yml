@@ -44,10 +44,10 @@ jobs:
       run: isort --check-only .
 
     - name: Run mypy type checking
-      run: mypy youtube_archiver/
+      run: mypy src/youtube_archiver/
 
     - name: Run bandit security analysis
-      run: bandit -r youtube_archiver/ -f json -o bandit-report.json || true
+      run: bandit -r src/youtube_archiver/ -f json -o bandit-report.json || true
 
     - name: Upload bandit report
       uses: actions/upload-artifact@v4

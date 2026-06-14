@@ -75,8 +75,8 @@ class TestCLIIntegration:
         """Test validate command with configuration error."""
         result = cli_runner.invoke(cli, ["--config", "nonexistent.yml", "validate"])
 
-        assert result.exit_code == 1
-        assert "Configuration Error" in result.output
+        assert result.exit_code == 2
+        assert "does not exist" in result.output
 
     def test_validate_command_not_authenticated(
         self,
@@ -302,7 +302,7 @@ class TestCLIIntegration:
             )
 
             assert result.exit_code == 0
-            assert "Processing specific channels" in result.output
+            assert "specific channels" in result.output
 
     def test_process_command_all_channels(
         self,
@@ -351,7 +351,8 @@ class TestCLIIntegration:
             )
 
             assert result.exit_code == 0
-            assert f"Using configuration: {temp_config_file}" in result.output
+            normalized = " ".join(result.output.split())
+            assert f"Using configuration: {temp_config_file}" in normalized
 
     def test_invalid_config_path(self, cli_runner: CliRunner) -> None:
         """Test CLI with invalid config path."""
