@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -11,14 +12,20 @@ from pydantic import ValidationError
 
 from youtube_archiver.domain.exceptions import ConfigurationError
 from youtube_archiver.domain.models.channel import ChannelConfig
-from youtube_archiver.domain.services.configuration_provider import ConfigurationProvider
-from youtube_archiver.infrastructure.config.models import AppConfig, LoggingConfig, RetrySettings
+from youtube_archiver.domain.services.configuration_provider import (
+    ConfigurationProvider,
+)
+from youtube_archiver.infrastructure.config.models import (
+    AppConfig,
+    LoggingConfig,
+    RetrySettings,
+)
 
 
 class YamlConfigurationProvider(ConfigurationProvider):
     """
     Configuration provider that loads settings from YAML files.
-    
+
     This implementation supports loading configuration from YAML files
     with environment variable substitution and validation using Pydantic models.
     """
@@ -26,10 +33,10 @@ class YamlConfigurationProvider(ConfigurationProvider):
     def __init__(self, config_path: str | Path) -> None:
         """
         Initialize the YAML configuration provider.
-        
+
         Args:
             config_path: Path to the YAML configuration file
-            
+
         Raises:
             ConfigurationError: If the configuration file cannot be loaded or is invalid
         """
@@ -41,22 +48,26 @@ class YamlConfigurationProvider(ConfigurationProvider):
         """Load and validate configuration from YAML file."""
         try:
             if not self.config_path.exists():
-                raise ConfigurationError(f"Configuration file not found: {self.config_path}")
-            
-            with open(self.config_path, "r", encoding="utf-8") as f:
+                raise ConfigurationError(
+                    f"Configuration file not found: {self.config_path}"
+                )
+
+            with open(self.config_path, encoding="utf-8") as f:
                 raw_config = yaml.safe_load(f)
-            
+
             if not raw_config:
                 raise ConfigurationError("Configuration file is empty")
-            
+
             # Perform environment variable substitution
             raw_config = self._substitute_env_vars(raw_config)
-            
+
             # Validate using Pydantic model
             self._config = AppConfig(**raw_config)
-            
+
         except yaml.YAMLError as e:
-            raise ConfigurationError(f"Invalid YAML syntax in configuration file: {e}") from e
+            raise ConfigurationError(
+                f"Invalid YAML syntax in configuration file: {e}"
+            ) from e
         except ValidationError as e:
             raise ConfigurationError(f"Configuration validation failed: {e}") from e
         except Exception as e:
@@ -65,7 +76,7 @@ class YamlConfigurationProvider(ConfigurationProvider):
     def _substitute_env_vars(self, obj: Any) -> Any:
         """
         Recursively substitute environment variables in configuration.
-        
+
         Supports ${VAR_NAME} and ${VAR_NAME:default_value} syntax.
         """
         if isinstance(obj, dict):
@@ -79,16 +90,14 @@ class YamlConfigurationProvider(ConfigurationProvider):
 
     def _substitute_string_env_vars(self, value: str) -> str:
         """Substitute environment variables in a string value."""
-        import re
-        
         # Pattern to match ${VAR_NAME} or ${VAR_NAME:default}
-        pattern = r'\$\{([^}:]+)(?::([^}]*))?\}'
-        
+        pattern = r"\$\{([^}:]+)(?::([^}]*))?\}"
+
         def replace_var(match: re.Match[str]) -> str:
             var_name = match.group(1)
             default_value = match.group(2) if match.group(2) is not None else ""
             return os.getenv(var_name, default_value)
-        
+
         return re.sub(pattern, replace_var, value)
 
     @property

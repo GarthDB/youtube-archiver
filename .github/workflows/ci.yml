@@ -22,7 +22,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -44,13 +44,13 @@ jobs:
       run: isort --check-only .
 
     - name: Run mypy type checking
-      run: mypy youtube_archiver/
+      run: mypy src/youtube_archiver/
 
     - name: Run bandit security analysis
-      run: bandit -r youtube_archiver/ -f json -o bandit-report.json || true
+      run: bandit -r src/youtube_archiver/ -f json -o bandit-report.json || true
 
     - name: Upload bandit report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: bandit-report-${{ matrix.python-version }}
@@ -116,7 +116,7 @@ jobs:
       run: python -m build
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dist-packages
         path: dist/

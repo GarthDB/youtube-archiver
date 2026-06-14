@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
@@ -20,11 +20,6 @@ from youtube_archiver.domain.models.processing import (
 from youtube_archiver.domain.models.video import Video, VideoStatus, VideoVisibility
 from youtube_archiver.infrastructure.config.models import (
     AppConfig,
-    LoggingConfig,
-    ProcessingSettings,
-    RetrySettings,
-    StakeInfo,
-    YouTubeAPIConfig,
 )
 
 
@@ -117,7 +112,7 @@ def sample_channel_config() -> ChannelConfig:
     """Create a sample channel config for testing."""
     return ChannelConfig(
         name="Test Ward 1",
-                    channel_id="UCTestChannelID000000001",
+        channel_id="UCTestChannelID000000001",
         timezone="America/Denver",
         enabled=True,
         max_videos_to_check=50,
@@ -139,28 +134,23 @@ def sample_video_old() -> Video:
         duration_seconds=3600,
         view_count=50,
         is_live_content=True,
-                    channel_id="UCTestChannelID000000001",
-
+        channel_id="UCTestChannelID000000001",
     )
 
 
 @pytest.fixture
 def sample_video_new() -> Video:
-    """Create a sample new video (not eligible for archiving)."""
+    """Create a sample new video (not eligible for archiving, published 12 hours ago)."""
     return Video(
         id="test_video_new_456",
         title="Recent Sacrament Meeting - Test Ward",
         description="Test description",
-        published_at=datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        - timedelta(hours=12),  # 12 hours old
+        published_at=datetime.now(timezone.utc) - timedelta(hours=12),  # always 12h ago
         visibility=VideoVisibility.PUBLIC,
         duration_seconds=3600,
         view_count=25,
         is_live_content=True,
-                    channel_id="UCTestChannelID000000001",
-
+        channel_id="UCTestChannelID000000001",
     )
 
 
@@ -179,8 +169,7 @@ def sample_video_unlisted() -> Video:
         duration_seconds=3600,
         view_count=75,
         is_live_content=True,
-                    channel_id="UCTestChannelID000000001",
-
+        channel_id="UCTestChannelID000000001",
     )
 
 
@@ -210,7 +199,7 @@ def sample_channel_result(
 ) -> ChannelProcessingResult:
     """Create a sample channel processing result."""
     result = ChannelProcessingResult(
-                    channel_id="UCTestChannelID000000001",
+        channel_id="UCTestChannelID000000001",
         channel_name="Test Ward 1",
     )
     result.add_result(sample_processing_result_success)
@@ -219,7 +208,9 @@ def sample_channel_result(
 
 
 @pytest.fixture
-def sample_batch_result(sample_channel_result: ChannelProcessingResult) -> BatchProcessingResult:
+def sample_batch_result(
+    sample_channel_result: ChannelProcessingResult,
+) -> BatchProcessingResult:
     """Create a sample batch processing result."""
     result = BatchProcessingResult()
     result.add_channel_result(sample_channel_result)
@@ -274,9 +265,13 @@ def mock_config_provider(app_config: AppConfig) -> Mock:
     """Create a mock configuration provider."""
     mock = Mock()
     mock.get_channels.return_value = app_config.channels
-    mock.get_age_threshold_hours.return_value = app_config.processing.age_threshold_hours
+    mock.get_age_threshold_hours.return_value = (
+        app_config.processing.age_threshold_hours
+    )
     mock.get_target_visibility.return_value = app_config.processing.target_visibility
-    mock.get_max_videos_per_channel.return_value = app_config.processing.max_videos_per_channel
+    mock.get_max_videos_per_channel.return_value = (
+        app_config.processing.max_videos_per_channel
+    )
     mock.get_dry_run_mode.return_value = app_config.processing.dry_run
     mock.get_credentials_file.return_value = app_config.youtube_api.credentials_file
     mock.get_token_file.return_value = app_config.youtube_api.token_file
@@ -291,6 +286,7 @@ def mock_config_provider(app_config: AppConfig) -> Mock:
 def event_loop():
     """Create an event loop for async tests."""
     import asyncio
+
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()

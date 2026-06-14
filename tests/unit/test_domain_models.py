@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -28,7 +28,9 @@ class TestVideo:
         assert sample_video_old.is_live_content is True
         assert sample_video_old.channel_id == "UCTestChannelID000000001"
 
-    def test_video_age_calculation(self, sample_video_old: Video, sample_video_new: Video) -> None:
+    def test_video_age_calculation(
+        self, sample_video_old: Video, sample_video_new: Video
+    ) -> None:
         """Test video age calculation."""
         # Old video should be at least 47 hours old (2 days)
         assert sample_video_old.age_hours >= 47
@@ -37,17 +39,31 @@ class TestVideo:
         assert sample_video_new.age_hours >= 11
 
     def test_video_eligibility_for_archiving(
-        self, sample_video_old: Video, sample_video_new: Video, sample_video_unlisted: Video
+        self,
+        sample_video_old: Video,
+        sample_video_new: Video,
+        sample_video_unlisted: Video,
     ) -> None:
         """Test video eligibility for archiving."""
         # Old public video should be eligible
-        assert sample_video_old.is_eligible_for_archiving is True
+        assert sample_video_old.is_eligible_for_archiving() is True
 
         # New video should not be eligible (too recent)
-        assert sample_video_new.is_eligible_for_archiving is False
+        assert sample_video_new.is_eligible_for_archiving() is False
 
         # Already unlisted video should not be eligible
-        assert sample_video_unlisted.is_eligible_for_archiving is False
+        assert sample_video_unlisted.is_eligible_for_archiving() is False
+
+    def test_video_eligibility_custom_threshold(self, sample_video_old: Video) -> None:
+        """Test that a custom age threshold is respected."""
+        # sample_video_old is ~48h old; eligible at 24h but not at 72h
+        assert (
+            sample_video_old.is_eligible_for_archiving(age_threshold_hours=24.0) is True
+        )
+        assert (
+            sample_video_old.is_eligible_for_archiving(age_threshold_hours=72.0)
+            is False
+        )
 
     def test_video_eligibility_non_live_content(self) -> None:
         """Test that non-live content is not eligible for archiving."""
@@ -62,7 +78,39 @@ class TestVideo:
             is_live_content=False,  # Not live content
             channel_id="UCTestChannelID000000001",
         )
-        assert video.is_eligible_for_archiving is False
+        assert video.is_eligible_for_archiving() is False
+
+    def test_video_age_uses_broadcast_at_when_set(self) -> None:
+        """broadcast_at takes precedence over published_at for age calculation."""
+        # Publish date is 2 days ago, but the broadcast only started 1 hour ago
+        broadcast_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        video = Video(
+            id="test_broadcast_at",
+            title="Live Meeting",
+            channel_id="UCTestChannelID000000001",
+            published_at=datetime.now(timezone.utc) - timedelta(days=2),
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+            broadcast_at=broadcast_time,
+        )
+        # Age should reflect broadcast_at (~1h), not published_at (~48h)
+        assert video.age_hours < 2.0
+        assert video.age_hours >= 1.0
+        # Not yet eligible because it aired less than 24h ago
+        assert video.is_eligible_for_archiving() is False
+
+    def test_video_age_falls_back_to_published_at(self) -> None:
+        """When broadcast_at is not set, age_hours uses published_at."""
+        published = datetime.now(timezone.utc) - timedelta(hours=36)
+        video = Video(
+            id="test_no_broadcast_at",
+            title="Meeting",
+            channel_id="UCTestChannelID000000001",
+            published_at=published,
+            visibility=VideoVisibility.PUBLIC,
+            is_live_content=True,
+        )
+        assert video.age_hours >= 35.0  # close to 36h
 
     def test_video_str_representation(self, sample_video_old: Video) -> None:
         """Test video string representation."""
@@ -89,14 +137,18 @@ class TestChannel:
 class TestChannelConfig:
     """Tests for ChannelConfig model."""
 
-    def test_channel_config_creation(self, sample_channel_config: ChannelConfig) -> None:
+    def test_channel_config_creation(
+        self, sample_channel_config: ChannelConfig
+    ) -> None:
         """Test channel config creation."""
         assert sample_channel_config.name == "Test Ward 1"
         assert sample_channel_config.channel_id == "UCTestChannelID000000001"
         assert sample_channel_config.enabled is True
         assert sample_channel_config.max_videos_to_check == 50
 
-    def test_channel_config_to_domain(self, sample_channel_config: ChannelConfig) -> None:
+    def test_channel_config_to_domain(
+        self, sample_channel_config: ChannelConfig
+    ) -> None:
         """Test conversion to domain model."""
         channel = sample_channel_config.to_domain()
         assert isinstance(channel, Channel)
@@ -105,7 +157,9 @@ class TestChannelConfig:
 
     def test_channel_config_validation_invalid_id(self) -> None:
         """Test channel config validation with invalid ID."""
-        with pytest.raises(ValueError, match="YouTube channel ID must be 24 characters long"):
+        with pytest.raises(
+            ValueError, match="YouTube channel ID must be 24 characters long"
+        ):
             ChannelConfig(
                 name="Test Ward",
                 channel_id="UCTooShort",  # Correct format but too short
@@ -129,18 +183,24 @@ class TestChannelConfig:
 class TestProcessingResult:
     """Tests for ProcessingResult model."""
 
-    def test_processing_result_success(self, sample_processing_result_success: ProcessingResult) -> None:
+    def test_processing_result_success(
+        self, sample_processing_result_success: ProcessingResult
+    ) -> None:
         """Test successful processing result."""
         assert sample_processing_result_success.is_success is True
         assert sample_processing_result_success.is_failure is False
         assert sample_processing_result_success.status == VideoStatus.PROCESSED
 
-    def test_processing_result_failure(self, sample_processing_result_failed: ProcessingResult) -> None:
+    def test_processing_result_failure(
+        self, sample_processing_result_failed: ProcessingResult
+    ) -> None:
         """Test failed processing result."""
         assert sample_processing_result_failed.is_success is False
         assert sample_processing_result_failed.is_failure is True
         assert sample_processing_result_failed.status == VideoStatus.FAILED
-        assert sample_processing_result_failed.error_message == "API rate limit exceeded"
+        assert (
+            sample_processing_result_failed.error_message == "API rate limit exceeded"
+        )
 
     def test_processing_result_skipped(self, sample_video_new: Video) -> None:
         """Test skipped processing result."""
@@ -185,7 +245,9 @@ class TestChannelProcessingResult:
         assert len(channel_result.results) == 2
         assert channel_result.has_errors is True
 
-    def test_channel_result_stats(self, sample_channel_result: ChannelProcessingResult) -> None:
+    def test_channel_result_stats(
+        self, sample_channel_result: ChannelProcessingResult
+    ) -> None:
         """Test channel processing result statistics."""
         stats = sample_channel_result.stats
         assert isinstance(stats, ProcessingStats)
@@ -194,13 +256,17 @@ class TestChannelProcessingResult:
         assert stats.videos_skipped == 0
         assert stats.total_videos_checked == 2
 
-    def test_channel_result_successful_results(self, sample_channel_result: ChannelProcessingResult) -> None:
+    def test_channel_result_successful_results(
+        self, sample_channel_result: ChannelProcessingResult
+    ) -> None:
         """Test getting successful results."""
         successful = sample_channel_result.successful_results
         assert len(successful) == 1
         assert successful[0].is_success is True
 
-    def test_channel_result_failed_results(self, sample_channel_result: ChannelProcessingResult) -> None:
+    def test_channel_result_failed_results(
+        self, sample_channel_result: ChannelProcessingResult
+    ) -> None:
         """Test getting failed results."""
         failed = sample_channel_result.failed_results
         assert len(failed) == 1
@@ -217,12 +283,16 @@ class TestBatchProcessingResult:
         assert result.global_error is None
         assert len(result.channel_results) == 0
 
-    def test_batch_result_add_channel_results(self, sample_batch_result: BatchProcessingResult) -> None:
+    def test_batch_result_add_channel_results(
+        self, sample_batch_result: BatchProcessingResult
+    ) -> None:
         """Test adding channel results to batch processing result."""
         assert len(sample_batch_result.channel_results) == 1
         assert sample_batch_result.has_errors is True
 
-    def test_batch_result_overall_stats(self, sample_batch_result: BatchProcessingResult) -> None:
+    def test_batch_result_overall_stats(
+        self, sample_batch_result: BatchProcessingResult
+    ) -> None:
         """Test batch processing result overall statistics."""
         stats = sample_batch_result.overall_stats
         assert isinstance(stats, ProcessingStats)
@@ -234,32 +304,36 @@ class TestBatchProcessingResult:
     def test_batch_result_successful_channels(self) -> None:
         """Test getting successful channels."""
         result = BatchProcessingResult()
-        
+
         # Add successful channel
         successful_channel = ChannelProcessingResult(
             channel_id="UCTestChannelID000000001",
             channel_name="Successful Ward",
         )
-        successful_channel.add_result(ProcessingResult(
-            video=Mock(),
-            status=VideoStatus.PROCESSED,
-        ))
-        
+        successful_channel.add_result(
+            ProcessingResult(
+                video=Mock(),
+                status=VideoStatus.PROCESSED,
+            )
+        )
+
         # Add failed channel
         failed_channel = ChannelProcessingResult(
             channel_id="UCTestChannelID00000002",
             channel_name="Failed Ward",
             error_message="Channel not found",
         )
-        
+
         result.add_channel_result(successful_channel)
         result.add_channel_result(failed_channel)
-        
+
         successful = result.successful_channels
         assert len(successful) == 1
         assert successful[0].channel_name == "Successful Ward"
 
-    def test_batch_result_failed_channels(self, sample_batch_result: BatchProcessingResult) -> None:
+    def test_batch_result_failed_channels(
+        self, sample_batch_result: BatchProcessingResult
+    ) -> None:
         """Test getting failed channels."""
         failed = sample_batch_result.failed_channels
         assert len(failed) == 1  # Channel has failed results
@@ -268,9 +342,9 @@ class TestBatchProcessingResult:
         """Test completing batch processing result."""
         result = BatchProcessingResult()
         start_time = result.started_at
-        
+
         result.complete()
-        
+
         assert result.completed_at is not None
         assert result.completed_at >= start_time
         assert result.overall_stats.processing_time_seconds >= 0

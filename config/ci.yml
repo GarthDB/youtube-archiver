@@ -1,0 +1,60 @@
+# YouTube Archiver — CI/GitHub Actions Configuration
+#
+# This file is committed to the repository. It contains no secrets.
+# Per-fork values are injected via GitHub Actions Variables (Settings → Variables)
+# and read here via ${VAR_NAME} substitution.
+#
+# Required Variables to set in your fork:
+#   WARD_CHANNEL_ID   — 24-character YouTube channel ID (e.g. UCxxxxxxxxxxxxxxxxxxxxxxxxx)
+#
+# Optional Variables (sensible defaults provided):
+#   WARD_NAME         — Display name for the channel (default: "Ward")
+#   STAKE_NAME        — Stake name for log output (default: "Our Stake")
+#   TECH_SPECIALIST   — Contact email shown in logs (default: empty)
+#   WARD_TIMEZONE     — IANA timezone (default: America/Denver)
+#   TARGET_VISIBILITY — "unlisted" or "private" (default: unlisted)
+#
+# OAuth credentials are injected from Secrets (never committed):
+#   YOUTUBE_CREDENTIALS_JSON — base64 of credentials.json
+#   YOUTUBE_TOKEN_JSON       — base64 of token.json (generated via `youtube-archiver auth setup`)
+#
+# See docs/fork-setup.md for the full setup guide.
+
+stake_info:
+  name: "${STAKE_NAME:Our Stake}"
+  tech_specialist: "${TECH_SPECIALIST:ward-tech-specialist}"
+  region: ""
+  notes: "Automated sacrament meeting visibility archiving"
+
+channels:
+  - name: "${WARD_NAME:Ward}"
+    channel_id: "${WARD_CHANNEL_ID}"
+    timezone: "${WARD_TIMEZONE:America/Denver}"
+    enabled: true
+    max_videos_to_check: 50
+
+processing:
+  age_threshold_hours: 24
+  target_visibility: "${TARGET_VISIBILITY:unlisted}"
+  max_videos_per_channel: 50
+  dry_run: false
+  batch_size: 10
+  initial_backlog_mode: false
+
+youtube_api:
+  credentials_file: "${YOUTUBE_CREDENTIALS_FILE:credentials.json}"
+  token_file: "${YOUTUBE_TOKEN_FILE:token.json}"
+  scopes:
+    - "https://www.googleapis.com/auth/youtube"
+
+retry_settings:
+  max_attempts: 3
+  backoff_factor: 2.0
+  max_delay: 300
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: null
+  max_file_size: 10485760
+  backup_count: 5

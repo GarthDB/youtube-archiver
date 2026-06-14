@@ -111,24 +111,36 @@ class ConfigurationProvider(ABC):
         pass
 
     @abstractmethod
-    def get_retry_settings(self) -> dict[str, Any]:
+    def get_retry_settings(self) -> Any:
         """
         Get retry configuration for API operations.
 
         Returns:
-            Dictionary with retry settings (max_attempts, backoff_factor, etc.)
+            Retry settings (RetrySettings model or equivalent dict)
         """
         pass
 
     @abstractmethod
-    def get_logging_config(self) -> dict[str, Any]:
+    def get_logging_config(self) -> Any:
         """
         Get logging configuration.
 
         Returns:
-            Dictionary with logging settings (level, format, handlers, etc.)
+            Logging settings (LoggingConfig model or equivalent dict)
         """
         pass
+
+    def get_credentials_file(self) -> Optional[str]:
+        """Get the path to the OAuth2 credentials file. Returns None if not configured."""
+        return None
+
+    def get_token_file(self) -> Optional[str]:
+        """Get the path to the stored access token file. Returns None if not configured."""
+        return None
+
+    def get_oauth_scopes(self) -> list[str]:
+        """Get the required OAuth2 scopes."""
+        return ["https://www.googleapis.com/auth/youtube"]
 
     @abstractmethod
     def reload(self) -> None:

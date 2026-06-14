@@ -1,0 +1,129 @@
+name: Archive Live Broadcasts
+
+# Runs twice weekly to ensure no live video stays public beyond 1 week
+# after its broadcast date.  Max gap between runs is ~3-4 days, well inside
+# the 7-day policy cap even if one run is missed.
+#
+# ── Setup checklist ──────────────────────────────────────────────────────────
+#
+# Secrets  (Settings → Secrets and variables → Actions → Secrets)
+#   YOUTUBE_CREDENTIALS_JSON  base64-encoded credentials.json
+#                             `base64 -i credentials.json | pbcopy`
+#   YOUTUBE_TOKEN_JSON        base64-encoded token.json (long-lived refresh token)
+#                             Generate once: `youtube-archiver auth setup`
+#                             Export:        `youtube-archiver auth export`
+#                             Or use:        `scripts/setup-github-secrets.sh`
+#
+# Variables  (Settings → Secrets and variables → Actions → Variables)
+#   WARD_CHANNEL_ID           Required — 24-char YouTube channel ID (UCxxxxxxxx…)
+#   WARD_NAME                 Optional — display name (default: "Ward")
+#   STAKE_NAME                Optional — stake name for logs (default: "Our Stake")
+#   TECH_SPECIALIST           Optional — contact email
+#   WARD_TIMEZONE             Optional — IANA timezone (default: America/Denver)
+#   TARGET_VISIBILITY         Optional — "unlisted" or "private" (default: unlisted)
+#
+# ⚠️  IMPORTANT: Your OAuth consent screen must be set to "In production"
+#     in Google Cloud Console, or your refresh token will expire after 7 days.
+#
+# ── Multi-channel forks ──────────────────────────────────────────────────────
+# Edit config/ci.yml directly to add more channel entries (each with its own
+# ${VAR} references), then set the additional Variables in repo settings.
+#
+# Full guide: docs/fork-setup.md
+
+on:
+  schedule:
+    # Tuesday and Friday at 05:00 UTC ≈ Monday/Thursday ~22:00 America/Denver
+    - cron: "0 5 * * 2,5"
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode (no visibility changes)"
+        type: boolean
+        default: true
+
+jobs:
+  archive:
+    name: Archive videos
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Decode credentials from secrets
+        env:
+          YOUTUBE_CREDENTIALS_JSON: ${{ secrets.YOUTUBE_CREDENTIALS_JSON }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: |
+          echo "$YOUTUBE_CREDENTIALS_JSON" | base64 --decode > credentials.json
+          echo "$YOUTUBE_TOKEN_JSON"        | base64 --decode > token.json
+
+      - name: Run archiver (scheduled — live run)
+        if: github.event_name == 'schedule'
+        env:
+          YOUTUBE_CREDENTIALS_FILE: credentials.json
+          YOUTUBE_TOKEN_FILE: token.json
+          WARD_CHANNEL_ID: ${{ vars.WARD_CHANNEL_ID }}
+          WARD_NAME: ${{ vars.WARD_NAME }}
+          STAKE_NAME: ${{ vars.STAKE_NAME }}
+          TECH_SPECIALIST: ${{ vars.TECH_SPECIALIST }}
+          WARD_TIMEZONE: ${{ vars.WARD_TIMEZONE }}
+          TARGET_VISIBILITY: ${{ vars.TARGET_VISIBILITY }}
+        run: |
+          set -o pipefail
+          youtube-archiver process --config config/ci.yml 2>&1 | tee archiver.log
+
+      - name: Run archiver (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          YOUTUBE_CREDENTIALS_FILE: credentials.json
+          YOUTUBE_TOKEN_FILE: token.json
+          WARD_CHANNEL_ID: ${{ vars.WARD_CHANNEL_ID }}
+          WARD_NAME: ${{ vars.WARD_NAME }}
+          STAKE_NAME: ${{ vars.STAKE_NAME }}
+          TECH_SPECIALIST: ${{ vars.TECH_SPECIALIST }}
+          WARD_TIMEZONE: ${{ vars.WARD_TIMEZONE }}
+          TARGET_VISIBILITY: ${{ vars.TARGET_VISIBILITY }}
+        run: |
+          set -o pipefail
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            youtube-archiver process --config config/ci.yml --dry-run 2>&1 | tee archiver.log
+          else
+            youtube-archiver process --config config/ci.yml 2>&1 | tee archiver.log
+          fi
+
+      - name: Check for policy breaches
+        # Fail the job loudly if any video has been public >168h, so a missed-run
+        # shows up as a failed workflow and triggers GitHub notifications.
+        run: |
+          if [ -f archiver.log ] && grep -q "POLICY BREACH" archiver.log; then
+            echo "::error::One or more videos were public for >168 hours (policy breach)." \
+                 "A prior scheduled run may have been missed. Review archiver.log above."
+            exit 1
+          fi
+          echo "No policy breaches detected."
+
+      - name: Clean up credentials
+        if: always()
+        run: |
+          rm -f credentials.json token.json
